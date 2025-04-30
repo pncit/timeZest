@@ -1,0 +1,5 @@
+src/
+.github/
+CODE_STANDARDS.md
+tsconfig.json
+prettierrc

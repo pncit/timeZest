@@ -1,7 +1,8 @@
 {
   "name": "timezest",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "node dist/src/tests/test.js",
