@@ -1,5 +1,12 @@
-import { defaultLogger } from "../utils/logger";
-import { TimeZestAPIConfig } from "./config.d";
+import { defaultLogger, LogLevel, Logger } from "../utils/logger";
+
+export interface TimeZestAPIConfig {
+  logLevel: LogLevel;
+  logger: Logger;
+  baseUrl: string;
+  maxRetryDelayMs: number;
+  maxRetryTimeMs: number;
+}
 
 export const CONFIG: TimeZestAPIConfig = {
   logLevel: "error",

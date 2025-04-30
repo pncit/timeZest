@@ -1,7 +1,17 @@
-import { LogLevel } from "./logger.d";
-import { handleError as HandleErrorType } from "./handleError.d";
+import { LogLevel } from "./logger";
 
-export const handleError: typeof HandleErrorType = (log, error) => {
+/**
+ * Handles errors from API requests.
+ * @param log - A logging function to log error details.
+ * @param error - The error object to handle.
+ * @returns An empty array if the error is a 404, otherwise throws an error.
+ */
+export type handleError = (
+  log: (level: LogLevel, message: string, data?: any) => void,
+  error: any,
+) => void | [];
+
+export const handleError: handleError = (log, error) => {
   if (error.response) {
     const { status, data } = error.response;
     if (status === 404) {

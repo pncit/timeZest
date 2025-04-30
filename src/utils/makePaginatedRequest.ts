@@ -1,14 +1,25 @@
 import { makeRequest } from "./makeRequest";
 import { handleError } from "./handleError";
-import { makePaginatedRequest as MakePaginatedRequestType } from "./makePaginatedRequest.d";
+import { apiEndpoint } from "../constants/endpoints";
+import { TimeZestAPI } from "../index";
 
-export const makePaginatedRequest: typeof MakePaginatedRequestType = async (
-  apiInstance,
-  endpoint,
-  method = "GET",
-  data = null,
-  filter = null,
-) => {
+/**
+ * Makes a paginated API request.
+ * @template T - The type of the response data.
+ * @param apiInstance - The instance of the TimeZestAPI.
+ * @param endpoint - The API endpoint to call.
+ * @param method - The HTTP method (GET or POST).
+ * @param data - The request payload.
+ * @param filter - An optional filter string.
+ * @returns A promise that resolves to an array of response data.
+ */
+export const makePaginatedRequest = async <T>(
+  apiInstance: TimeZestAPI,
+  endpoint: apiEndpoint,
+  method: "GET" | "POST" = "GET",
+  data: any = null,
+  filter: string | null = null,
+): Promise<T[]> => {
   const { log } = apiInstance;
   const apiKey = apiInstance.getApiKey();
   const { baseUrl, maxRetryTimeMs, maxRetryDelayMs } = apiInstance.getConfig();

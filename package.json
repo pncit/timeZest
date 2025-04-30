@@ -1,16 +1,14 @@
 {
   "name": "timezest",
-  "version": "1.0.2",
-  "main": "dist/index.js",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
+  "version": "1.0.7",
+  "main": "index.js",
   "scripts": {
     "build": "tsc",
     "test": "node dist/src/tests/test.js",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "clean": "if exist dist rmdir /s /q dist",
+    "prep-publish": "npm run clean && npm run build && copy package.json dist\\package.json && copy README.md dist\\README.md && copy LICENSE dist\\LICENSE",
+    "publish": "npm run prep-publish && npm publish .\\dist"
   },
   "keywords": [],
   "author": "",

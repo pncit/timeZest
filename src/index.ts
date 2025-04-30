@@ -1,34 +1,53 @@
-import {
-  TimeZestAPI as TimeZestAPIInterface,
-  TimeZestAPIOptions,
-  TimeZestAPIConfig,
-  LogLevel,
-  log,
-  Agent,
-  AppointmentType,
-  Resource,
-  SchedulingRequest,
-  Team,
-} from "./index.d";
-
+import { log,LogLevel, Logger } from "./utils/logger";
+import { TimeZestAPIConfig } from "./config/config";
+import { Agent, Resource, AppointmentType, SchedulingRequest, Team } from "./entities/entities";
 import {
   ResourceSchema,
   AgentSchema,
   AppointmentTypeSchema,
   SchedulingRequestSchema,
   TeamSchema,
-} from "./src/entities/schemas";
-import { CONFIG } from "./src/config/config";
-import { makeRequest } from "./src/utils/makeRequest";
-import { API_ENDPOINTS } from "./src/constants/endpoints";
-import { buildLogger, withLogging } from "./src/utils/logger";
-import { makePaginatedRequest } from "./src/utils/makePaginatedRequest";
+} from "./entities/schemas";
+import { CONFIG } from "./config/config";
+import { makeRequest } from "./utils/makeRequest";
+import { API_ENDPOINTS } from "./constants/endpoints";
+import { buildLogger, withLogging } from "./utils/logger";
+import { makePaginatedRequest } from "./utils/makePaginatedRequest";
 
-class TimeZestAPI implements TimeZestAPIInterface {
+/**
+ * Options for configuring the TimeZest API.
+ */
+export interface TimeZestAPIOptions {
+  /** The log level for the API (e.g., 'info', 'debug'). */
+  logLevel?: LogLevel;
+
+  /** A custom logger implementation. */
+  logger?: Logger;
+
+  /** The base URL for the API. */
+  baseUrl?: string;
+
+  /** The maximum delay between retries, in milliseconds. */
+  maxRetryDelayMs?: number;
+
+  /** The maximum total retry time, in milliseconds. */
+  maxRetryTimeMs?: number;
+}
+
+/**
+ * Represents the TimeZest API client.
+ * Provides methods to interact with the TimeZest API.
+ */
+export class TimeZestAPI {
   private config: TimeZestAPIConfig;
   private apiKey: string;
   log: log;
 
+  /**
+   * Creates an instance of the TimeZestAPI client.
+   * @param apiKey - The API key for authenticating with the TimeZest API.
+   * @param options - Optional configuration options for the API client.
+   */
   constructor(apiKey: string, options?: TimeZestAPIOptions) {
     this.apiKey = apiKey;
     this.config = {
@@ -73,14 +92,27 @@ class TimeZestAPI implements TimeZestAPIInterface {
     );
   }
 
+  /**
+   * Retrieves the API key used by the client.
+   * @returns The API key.
+   */
   getApiKey(): string {
     return this.apiKey;
   }
 
+  /**
+   * Retrieves the configuration of the API client.
+   * @returns The API client configuration.
+   */
   getConfig(): TimeZestAPIConfig {
     return this.config;
   }
 
+  /**
+   * Fetches resources from the TimeZest API.
+   * @param filter - Optional filter string to narrow down results.
+   * @returns A promise that resolves to an array of resources.
+   */
   getResources = async (filter: string | null = null): Promise<Resource[]> => {
     const response = await makePaginatedRequest<Resource>(
       this,
@@ -92,6 +124,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response.map((item) => ResourceSchema.parse(item));
   };
 
+  /**
+   * Fetches agents from the TimeZest API.
+   * @param filter - Optional filter string to narrow down results.
+   * @returns A promise that resolves to an array of agents.
+   */
   async getAgents(filter: string | null = null): Promise<Agent[]> {
     const response = await makePaginatedRequest<Agent>(
       this,
@@ -103,6 +140,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response.map((item) => AgentSchema.parse(item));
   }
 
+  /**
+   * Fetches teams from the TimeZest API.
+   * @param filter - Optional filter string to narrow down results.
+   * @returns A promise that resolves to an array of teams.
+   */
   async getTeams(filter: string | null = null): Promise<Team[]> {
     const response = await makePaginatedRequest<Team>(
       this,
@@ -114,6 +156,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response.map((item) => TeamSchema.parse(item));
   }
 
+  /**
+   * Fetches appointment types from the TimeZest API.
+   * @param filter - Optional filter string to narrow down results.
+   * @returns A promise that resolves to an array of appointment types.
+   */
   async getAppointmentTypes(
     filter: string | null = null,
   ): Promise<AppointmentType[]> {
@@ -127,6 +174,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response.map((item) => AppointmentTypeSchema.parse(item));
   }
 
+  /**
+   * Fetches a scheduling request by its ID.
+   * @param id - The ID of the scheduling request.
+   * @returns A promise that resolves to the scheduling request.
+   */
   async getSchedulingRequest(id: string): Promise<SchedulingRequest> {
     const response = await makeRequest<SchedulingRequest>(
       this.log,
@@ -141,6 +193,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return SchedulingRequestSchema.parse(response);
   }
 
+  /**
+   * Fetches scheduling requests from the TimeZest API.
+   * @param filter - Optional filter string to narrow down results.
+   * @returns A promise that resolves to an array of scheduling requests.
+   */
   async getSchedulingRequests(
     filter: string | null = null,
   ): Promise<SchedulingRequest[]> {
@@ -154,6 +211,11 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response.map((item) => SchedulingRequestSchema.parse(item));
   }
 
+  /**
+   * Creates a new scheduling request.
+   * @param data - The data for the scheduling request.
+   * @returns A promise that resolves to the created scheduling request.
+   */
   async createSchedulingRequest(
     data: SchedulingRequest,
   ): Promise<SchedulingRequest> {
@@ -170,5 +232,3 @@ class TimeZestAPI implements TimeZestAPIInterface {
     return response;
   }
 }
-
-export default TimeZestAPI;
