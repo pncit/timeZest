@@ -1,5 +1,5 @@
-import { LogLevel, Logger } from "./logger.js";
-export { LogLevel, Logger } from "./logger.js";
+import { LogLevel, Logger, log } from "./logger.js";
+export { LogLevel, Logger, log } from "./logger.js";
 export {
   Agent,
   AppointmentType,

@@ -1,3 +1,8 @@
+export type log = {
+  (level: LogLevel, message: string, data?: any): void;
+}
+
+
 export interface Logger {
   silent: (message: string, data?: any) => void;
   error: (message: string, data?: any) => void;

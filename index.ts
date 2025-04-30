@@ -3,6 +3,7 @@ import {
   TimeZestAPIOptions,
   TimeZestAPIConfig,
   LogLevel,
+  log,
   Agent,
   AppointmentType,
   Resource,
@@ -26,7 +27,7 @@ import { makePaginatedRequest } from "./src/utils/makePaginatedRequest";
 class TimeZestAPI implements TimeZestAPIInterface {
   private config: TimeZestAPIConfig;
   private apiKey: string;
-  log: (level: LogLevel, message: string, data?: any) => void;
+  log: log;
 
   constructor(apiKey: string, options?: TimeZestAPIOptions) {
     this.apiKey = apiKey;
