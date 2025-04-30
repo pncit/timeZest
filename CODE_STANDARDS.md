@@ -12,6 +12,8 @@ This project follows Microsoft's best practices for TypeScript development and u
 
 ## Code Formatting
 
+### Prettier Rules
+
 This project uses Prettier for consistent code formatting. The `.prettierrc` file defines the following rules:
 
 ```json
@@ -19,18 +21,21 @@ This project uses Prettier for consistent code formatting. The `.prettierrc` fil
   "semi": true,
   "singleQuote": true,
   "tabWidth": 2,
+  "useTabs": false,
+  "printWidth": 120,
   "trailingComma": "es5",
-  "printWidth": 80
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "quoteProps": "consistent",
+  "jsxSingleQuote": true,
+  "objectWrap": "preserve",
+  "bracketSameLine": false,
+  "proseWrap": "always",
+  "singleAttributePerLine": true,
+  "htmlWhitespaceSensitivity": "css"
 }
 ```
-
-### Prettier Rules
-
-- **Semicolons**: Always use semicolons.
-- **Quotes**: Use single quotes for strings.
-- **Tab Width**: Use 2 spaces for indentation.
-- **Trailing Commas**: Include trailing commas where valid in ES5 (e.g., objects, arrays).
-- **Line Width**: Limit lines to 80 characters.
 
 Run Prettier before committing code:
 
