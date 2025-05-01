@@ -1,6 +1,12 @@
-import { log,LogLevel, Logger } from "./utils/logger";
+import { log, LogLevel, Logger } from "./utils/logger";
 import { TimeZestAPIConfig } from "./config/config";
-import { Agent, Resource, AppointmentType, SchedulingRequest, Team } from "./entities/entities";
+import {
+  Agent,
+  Resource,
+  AppointmentType,
+  SchedulingRequest,
+  Team,
+} from "./entities/entities";
 import {
   ResourceSchema,
   AgentSchema,
@@ -213,7 +219,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return this.validateResponse(response, SchedulingRequestSchema)
+    return this.validateResponse(response, SchedulingRequestSchema);
   }
 
   /**

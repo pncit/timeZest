@@ -25,8 +25,7 @@ export async function makeRequest<T>(
   data: any,
   maxRetryTimeMs: number,
   maxRetryDelayMs: number,
-): Promise<T>  {
-
+): Promise<T> {
   let totalElapsedTime = 0;
   let retries = 0;
 
@@ -80,4 +79,4 @@ export async function makeRequest<T>(
   throw new Error(
     `Max retry time of ${maxRetryTimeMs} minutes exceeded for ${endpoint}`,
   );
-};
+}

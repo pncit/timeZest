@@ -106,7 +106,7 @@ Pass TQL statements into the request to filter your results
 ```typescript
 async function fetchTier1Team() {
   try {
-    const teams = await timeZest.getTeams('team.internal_name EQ Tier1');
+    const teams = await timeZest.getTeams("team.internal_name EQ Tier1");
     console.log("Teams:", teams);
   } catch (error) {
     console.error("Error fetching teams:", error);

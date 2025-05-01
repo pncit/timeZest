@@ -1,7 +1,7 @@
 /**
  * Defines the API endpoints used in the TimeZest application.
  */
-export type apiEndpoints ={
+export type apiEndpoints = {
   /** Endpoint for managing resources. */
   RESOURCES: apiEndpoint;
 
