@@ -13,6 +13,7 @@ import { makeRequest } from "./utils/makeRequest";
 import { API_ENDPOINTS } from "./constants/endpoints";
 import { buildLogger, withLogging } from "./utils/logger";
 import { makePaginatedRequest } from "./utils/makePaginatedRequest";
+import { ZodSchema } from "zod";
 
 /**
  * Options for configuring the TimeZest API.
@@ -32,6 +33,9 @@ export interface TimeZestAPIOptions {
 
   /** The maximum total retry time, in milliseconds. */
   maxRetryTimeMs?: number;
+
+  /** Whether to use Zod validation for API responses. */
+  outputValidation?: boolean;
 }
 
 /**
@@ -56,6 +60,7 @@ export class TimeZestAPI {
       baseUrl: options?.baseUrl || CONFIG.baseUrl,
       maxRetryDelayMs: options?.maxRetryDelayMs || CONFIG.maxRetryDelayMs,
       maxRetryTimeMs: options?.maxRetryTimeMs || CONFIG.maxRetryTimeMs,
+      outputValidation: options?.outputValidation || CONFIG.outputValidation,
     };
     this.log = buildLogger(this.config.logger, this.config.logLevel);
     // Log the initialization of the API client but remove apiKey
@@ -121,7 +126,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return response.map((item) => ResourceSchema.parse(item));
+    return this.validateResponse(response, ResourceSchema);
   };
 
   /**
@@ -137,7 +142,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return response.map((item) => AgentSchema.parse(item));
+    return this.validateResponse(response, AgentSchema);
   }
 
   /**
@@ -153,7 +158,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return response.map((item) => TeamSchema.parse(item));
+    return this.validateResponse(response, TeamSchema);
   }
 
   /**
@@ -171,7 +176,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return response.map((item) => AppointmentTypeSchema.parse(item));
+    return this.validateResponse(response, AppointmentTypeSchema);
   }
 
   /**
@@ -208,7 +213,7 @@ export class TimeZestAPI {
       null,
       filter,
     );
-    return response.map((item) => SchedulingRequestSchema.parse(item));
+    return this.validateResponse(response, SchedulingRequestSchema)
   }
 
   /**
@@ -229,6 +234,19 @@ export class TimeZestAPI {
       this.config.maxRetryTimeMs,
       this.config.maxRetryDelayMs,
     );
+    return response;
+  }
+
+  /**
+   * Validates API responses using Zod schemas if outputValidation is enabled.
+   * @param response - The API response data to validate.
+   * @param schema - The Zod schema to validate against.
+   * @returns The validated or raw response data.
+   */
+  private validateResponse<T>(response: T[], schema: ZodSchema): T[] {
+    if (this.config.outputValidation) {
+      return response.map((item) => schema.parse(item));
+    }
     return response;
   }
 }

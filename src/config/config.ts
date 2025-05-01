@@ -6,6 +6,7 @@ export interface TimeZestAPIConfig {
   baseUrl: string;
   maxRetryDelayMs: number;
   maxRetryTimeMs: number;
+  outputValidation: boolean;
 }
 
 export const CONFIG: TimeZestAPIConfig = {
@@ -14,4 +15,5 @@ export const CONFIG: TimeZestAPIConfig = {
   baseUrl: "https://api.timezest.com/v1",
   maxRetryDelayMs: 1.5 * 60 * 1000, // 1.5 minutes
   maxRetryTimeMs: 15 * 1000, // 15 seconds
+  outputValidation: true,
 };
