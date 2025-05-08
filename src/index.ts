@@ -66,7 +66,7 @@ export class TimeZestAPI {
       baseUrl: options?.baseUrl || CONFIG.baseUrl,
       maxRetryDelayMs: options?.maxRetryDelayMs || CONFIG.maxRetryDelayMs,
       maxRetryTimeMs: options?.maxRetryTimeMs || CONFIG.maxRetryTimeMs,
-      outputValidation: options?.outputValidation || CONFIG.outputValidation,
+      outputValidation: options?.outputValidation !== undefined ? options.outputValidation : CONFIG.outputValidation
     };
     this.log = buildLogger(this.config.logger, this.config.logLevel);
     // Log the initialization of the API client but remove apiKey
