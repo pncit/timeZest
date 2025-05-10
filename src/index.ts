@@ -21,6 +21,9 @@ import { buildLogger, withLogging } from "./utils/logger";
 import { makePaginatedRequest } from "./utils/makePaginatedRequest";
 import { ZodSchema } from "zod";
 
+export { Agent, Resource, AppointmentType, SchedulingRequest, Team } from "./entities/entities";
+export { ResourceSchema, AgentSchema, AppointmentTypeSchema, SchedulingRequestSchema, TeamSchema } from "./entities/schemas";
+
 /**
  * Options for configuring the TimeZest API.
  */
@@ -256,3 +259,5 @@ export class TimeZestAPI {
     return response;
   }
 }
+
+export default TimeZestAPI;
