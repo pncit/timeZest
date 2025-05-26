@@ -6,6 +6,7 @@ import {
   AppointmentType,
   SchedulingRequest,
   Team,
+  SchedulingRequestPost,
 } from "./entities/entities";
 import {
   ResourceSchema,
@@ -21,7 +22,7 @@ import { buildLogger, withLogging } from "./utils/logger";
 import { makePaginatedRequest } from "./utils/makePaginatedRequest";
 import { ZodSchema } from "zod";
 
-export { Agent, Resource, AppointmentType, SchedulingRequest, Team } from "./entities/entities";
+export { Agent, Resource, AppointmentType, SchedulingRequest, SchedulingRequestPost, Team } from "./entities/entities";
 export { ResourceSchema, AgentSchema, AppointmentTypeSchema, SchedulingRequestSchema, TeamSchema } from "./entities/schemas";
 
 /**
@@ -107,16 +108,16 @@ export class TimeZestAPI {
   }
 
   /**
-   * Retrieves the API key used by the client.
-   * @returns The API key.
+   * Returns the API key used by this client instance.
+   * @returns {string} The API key for authenticating with the TimeZest API.
    */
   getApiKey(): string {
     return this.apiKey;
   }
 
   /**
-   * Retrieves the configuration of the API client.
-   * @returns The API client configuration.
+   * Returns the configuration object for this API client instance.
+   * @returns {TimeZestAPIConfig} The configuration for the API client.
    */
   getConfig(): TimeZestAPIConfig {
     return this.config;
@@ -124,8 +125,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches resources from the TimeZest API.
-   * @param filter - Optional filter string to narrow down results.
-   * @returns A promise that resolves to an array of resources.
+   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @returns {Promise<Resource[]>} A promise that resolves to an array of resources.
    */
   getResources = async (filter: string | null = null): Promise<Resource[]> => {
     const response = await makePaginatedRequest<Resource>(
@@ -140,8 +141,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches agents from the TimeZest API.
-   * @param filter - Optional filter string to narrow down results.
-   * @returns A promise that resolves to an array of agents.
+   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @returns {Promise<Agent[]>} A promise that resolves to an array of agents.
    */
   async getAgents(filter: string | null = null): Promise<Agent[]> {
     const response = await makePaginatedRequest<Agent>(
@@ -156,8 +157,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches teams from the TimeZest API.
-   * @param filter - Optional filter string to narrow down results.
-   * @returns A promise that resolves to an array of teams.
+   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @returns {Promise<Team[]>} A promise that resolves to an array of teams.
    */
   async getTeams(filter: string | null = null): Promise<Team[]> {
     const response = await makePaginatedRequest<Team>(
@@ -172,8 +173,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches appointment types from the TimeZest API.
-   * @param filter - Optional filter string to narrow down results.
-   * @returns A promise that resolves to an array of appointment types.
+   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @returns {Promise<AppointmentType[]>} A promise that resolves to an array of appointment types.
    */
   async getAppointmentTypes(
     filter: string | null = null,
@@ -190,8 +191,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches a scheduling request by its ID.
-   * @param id - The ID of the scheduling request.
-   * @returns A promise that resolves to the scheduling request.
+   * @param {string} id - The ID of the scheduling request to fetch.
+   * @returns {Promise<SchedulingRequest>} A promise that resolves to the scheduling request.
    */
   async getSchedulingRequest(id: string): Promise<SchedulingRequest> {
     const response = await makeRequest<SchedulingRequest>(
@@ -209,8 +210,8 @@ export class TimeZestAPI {
 
   /**
    * Fetches scheduling requests from the TimeZest API.
-   * @param filter - Optional filter string to narrow down results.
-   * @returns A promise that resolves to an array of scheduling requests.
+   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @returns {Promise<SchedulingRequest[]>} A promise that resolves to an array of scheduling requests.
    */
   async getSchedulingRequests(
     filter: string | null = null,
@@ -226,12 +227,12 @@ export class TimeZestAPI {
   }
 
   /**
-   * Creates a new scheduling request.
-   * @param data - The data for the scheduling request.
-   * @returns A promise that resolves to the created scheduling request.
+   * Creates a new scheduling request in the TimeZest API.
+   * @param {SchedulingRequestPost} data - The data for the new scheduling request.
+   * @returns {Promise<SchedulingRequest>} A promise that resolves to the created scheduling request.
    */
   async createSchedulingRequest(
-    data: SchedulingRequest,
+    data: SchedulingRequestPost,
   ): Promise<SchedulingRequest> {
     const response = await makeRequest<SchedulingRequest>(
       this.log,
@@ -247,10 +248,10 @@ export class TimeZestAPI {
   }
 
   /**
-   * Validates API responses using Zod schemas if outputValidation is enabled.
-   * @param response - The API response data to validate.
-   * @param schema - The Zod schema to validate against.
-   * @returns The validated or raw response data.
+   * Validates API responses using Zod schemas if outputValidation is enabled in the config.
+   * @param {T[]} response - The API response data to validate.
+   * @param {ZodSchema} schema - The Zod schema to validate against.
+   * @returns {T[]} The validated or raw response data.
    */
   private validateResponse<T>(response: T[], schema: ZodSchema): T[] {
     if (this.config.outputValidation) {
