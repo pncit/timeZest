@@ -277,6 +277,45 @@ export class TQLFilter<TAttribute extends string = string> {
   }
 
   /**
+   * Replaces spaces with tildes outside of quoted strings.
+   * This is needed for URL encoding while preserving spaces inside quoted values.
+   * Handles escaped quotes properly (e.g., "value with \"quotes\"").
+   * @param str - The string to process
+   * @returns The string with spaces outside quotes replaced by tildes
+   */
+  private replaceSpacesOutsideQuotes(str: string): string {
+    let result = '';
+    let insideQuotes = false;
+    let i = 0;
+    
+    while (i < str.length) {
+      const char = str[i];
+      
+      if (char === '\\' && insideQuotes && i + 1 < str.length) {
+        // Handle escaped characters (like \")
+        result += char + str[i + 1];
+        i += 2;
+        continue;
+      }
+      
+      if (char === '"') {
+        // Toggle quote state
+        insideQuotes = !insideQuotes;
+        result += char;
+      } else if (char === ' ' || char === '\t' || char === '\n') {
+        // Only replace whitespace if we're NOT inside quotes
+        result += insideQuotes ? char : '~';
+      } else {
+        result += char;
+      }
+      
+      i++;
+    }
+    
+    return result;
+  }
+
+  /**
    * Converts the filter to a TQL string suitable for API requests.
    * In URLs, spaces are replaced with tildes (~).
    * @param urlEncode - If true, replaces spaces with ~ for URL encoding (default: true)
@@ -311,8 +350,9 @@ export class TQLFilter<TAttribute extends string = string> {
     let result = parts.join(' ');
     
     // Replace spaces with ~ for URL encoding if requested
+    // Only replace spaces outside of quoted strings to preserve spaces in values
     if (urlEncode) {
-      result = result.replace(/\s+/g, '~');
+      result = this.replaceSpacesOutsideQuotes(result);
     }
     
     return result;
@@ -411,8 +451,8 @@ export class TQL {
    * TQL.forAgents().filter('email').eq('user@example.com')
    * ```
    */
-  static forAgents(): TypedTQLFilterBuilder<keyof Agent> {
-    return new TypedTQLFilterBuilder<keyof Agent>('agent');
+  static forAgents(): TypedTQLFilterBuilder<Agent> {
+    return new TypedTQLFilterBuilder<Agent>('agent');
   }
 
   /**
@@ -425,8 +465,8 @@ export class TQL {
    * TQL.forResources().filter('schedulable').eq(true)
    * ```
    */
-  static forResources(): TypedTQLFilterBuilder<keyof Resource> {
-    return new TypedTQLFilterBuilder<keyof Resource>('resource');
+  static forResources(): TypedTQLFilterBuilder<Resource> {
+    return new TypedTQLFilterBuilder<Resource>('resource');
   }
 
   /**
@@ -439,8 +479,8 @@ export class TQL {
    * TQL.forTeams().filter('team_type').eq('support')
    * ```
    */
-  static forTeams(): TypedTQLFilterBuilder<keyof Team> {
-    return new TypedTQLFilterBuilder<keyof Team>('team');
+  static forTeams(): TypedTQLFilterBuilder<Team> {
+    return new TypedTQLFilterBuilder<Team>('team');
   }
 
   /**
@@ -453,8 +493,8 @@ export class TQL {
    * TQL.forAppointmentTypes().filter('duration_mins').gte(30)
    * ```
    */
-  static forAppointmentTypes(): TypedTQLFilterBuilder<keyof AppointmentType> {
-    return new TypedTQLFilterBuilder<keyof AppointmentType>('appointment_type');
+  static forAppointmentTypes(): TypedTQLFilterBuilder<AppointmentType> {
+    return new TypedTQLFilterBuilder<AppointmentType>('appointment_type');
   }
 
   /**
@@ -467,8 +507,8 @@ export class TQL {
    * TQL.forSchedulingRequests().filter('end_user_email').like('@example.com')
    * ```
    */
-  static forSchedulingRequests(): TypedTQLFilterBuilder<keyof SchedulingRequest> {
-    return new TypedTQLFilterBuilder<keyof SchedulingRequest>('scheduling_request');
+  static forSchedulingRequests(): TypedTQLFilterBuilder<SchedulingRequest> {
+    return new TypedTQLFilterBuilder<SchedulingRequest>('scheduling_request');
   }
 }
 
