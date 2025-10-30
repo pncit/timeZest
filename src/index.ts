@@ -21,9 +21,11 @@ import { API_ENDPOINTS } from "./constants/endpoints";
 import { buildLogger, withLogging } from "./utils/logger";
 import { makePaginatedRequest } from "./utils/makePaginatedRequest";
 import { ZodSchema } from "zod";
+import { TQLFilter } from "./utils/tqlFilter";
 
 export { Agent, Resource, AppointmentType, SchedulingRequest, SchedulingRequestPost, Team } from "./entities/entities";
 export { ResourceSchema, AgentSchema, AppointmentTypeSchema, SchedulingRequestSchema, TeamSchema } from "./entities/schemas";
+export { TQL, TQLFilter } from "./utils/tqlFilter";
 
 /**
  * Options for configuring the TimeZest API.
@@ -125,10 +127,10 @@ export class TimeZestAPI {
 
   /**
    * Fetches resources from the TimeZest API.
-   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<Resource[]>} A promise that resolves to an array of resources.
    */
-  getResources = async (filter: string | null = null): Promise<Resource[]> => {
+  getResources = async (filter: TQLFilter | string | null = null): Promise<Resource[]> => {
     const response = await makePaginatedRequest<Resource>(
       this,
       API_ENDPOINTS.RESOURCES,
@@ -141,10 +143,10 @@ export class TimeZestAPI {
 
   /**
    * Fetches agents from the TimeZest API.
-   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<Agent[]>} A promise that resolves to an array of agents.
    */
-  async getAgents(filter: string | null = null): Promise<Agent[]> {
+  async getAgents(filter: TQLFilter | string | null = null): Promise<Agent[]> {
     const response = await makePaginatedRequest<Agent>(
       this,
       API_ENDPOINTS.AGENTS,
@@ -157,10 +159,10 @@ export class TimeZestAPI {
 
   /**
    * Fetches teams from the TimeZest API.
-   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<Team[]>} A promise that resolves to an array of teams.
    */
-  async getTeams(filter: string | null = null): Promise<Team[]> {
+  async getTeams(filter: TQLFilter | string | null = null): Promise<Team[]> {
     const response = await makePaginatedRequest<Team>(
       this,
       API_ENDPOINTS.TEAMS,
@@ -173,11 +175,11 @@ export class TimeZestAPI {
 
   /**
    * Fetches appointment types from the TimeZest API.
-   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<AppointmentType[]>} A promise that resolves to an array of appointment types.
    */
   async getAppointmentTypes(
-    filter: string | null = null,
+    filter: TQLFilter | string | null = null,
   ): Promise<AppointmentType[]> {
     const response = await makePaginatedRequest<AppointmentType>(
       this,
@@ -210,11 +212,11 @@ export class TimeZestAPI {
 
   /**
    * Fetches scheduling requests from the TimeZest API.
-   * @param {string | null} [filter=null] - Optional filter string to narrow down results.
+   * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<SchedulingRequest[]>} A promise that resolves to an array of scheduling requests.
    */
   async getSchedulingRequests(
-    filter: string | null = null,
+    filter: TQLFilter | string | null = null,
   ): Promise<SchedulingRequest[]> {
     const response = await makePaginatedRequest<SchedulingRequest>(
       this,
