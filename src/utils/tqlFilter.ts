@@ -74,6 +74,9 @@ export class TQLFilter<TAttribute extends string = string> {
   private predicates: TQLPredicate[] = [];
   private logicalOperators: LogicalOperator[] = [];
   private entityPrefix: string | null = null;
+  private currentAttribute: TAttribute | '';
+  private currentOperator: TQLOperator | null = null;
+  private currentValue: string | number | string[] | number[] | null = null;
 
   /**
    * Creates a new TQL filter starting with the given attribute.
@@ -84,10 +87,6 @@ export class TQLFilter<TAttribute extends string = string> {
     this.currentAttribute = attribute;
     this.entityPrefix = entityPrefix || null;
   }
-
-  private currentAttribute: TAttribute | '';
-  private currentOperator: TQLOperator | null = null;
-  private currentValue: string | number | string[] | number[] | null = null;
 
   /**
    * Adds a completed predicate and starts a new one.
