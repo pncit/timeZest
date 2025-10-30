@@ -265,10 +265,10 @@ export class TQLFilter<TAttribute extends string = string> {
       return String(value);
     }
     
-    // Strings containing spaces, commas, or tildes should be enclosed in quotes
-    if (/[\s,~"]/.test(value) || value === '') {
-      // Escape quotes in the value
-      const escaped = value.replace(/"/g, '\\"');
+    // Strings containing spaces, commas, tildes, backslashes, or quotes should be enclosed in quotes
+    if (/[\s,~"\\]/.test(value) || value === '') {
+      // Escape backslashes and quotes in the value to prevent injection issues
+      const escaped = value.replace(/[\\"]/g, '\\$&');
       return `"${escaped}"`;
     }
     
