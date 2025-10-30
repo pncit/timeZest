@@ -133,29 +133,51 @@ async function fetchAllResources() {
 fetchAllResources();
 ```
 
-## Retry Logic
+## Rate Limiting and Retry Logic
 
-The `TimeZestAPI` class includes built-in retry logic for handling transient errors, such as network issues or rate-limiting responses from the TimeZest API. You can configure the retry behavior using the following options when initializing the class:
+The `TimeZestAPI` class includes intelligent retry logic optimized for TimeZest's API limits. TimeZest enforces a **maximum of 180 requests in any 60-second sliding window**.
 
-- **`maxRetryTimeMs`**: The maximum amount of time (in milliseconds) to spend retrying a request. Defaults to a reasonable value defined in the configuration.
-- **`maxRetryDelayMs`**: The maximum delay (in milliseconds) between retry attempts. This helps prevent excessive delays during retries.
+### Retry Strategy
+
+When a request fails due to rate limiting (429 Too Many Requests), the library automatically retries with an optimized strategy:
+
+- **Aggressive Exponential Backoff**: Starts at 1 second and doubles with each retry (1s, 2s, 4s, 8s, 16s, 32s, 64s...)
+- **Jitter**: Adds ±25% random variation to retry delays to prevent thundering herd problems when multiple clients hit rate limits simultaneously
+- **Retry-After Header**: Always respects the `Retry-After` header from 429 responses when provided by the API
+- **Patient by Default**: Will retry for up to 5 minutes by default, allowing time for rate limit windows to clear
+- **Configurable**: Full control over retry behavior via configuration options
+
+### Configuration Options
+
+You can configure the retry behavior using the following options when initializing the class:
+
+- **`maxRetryTimeMs`**: The maximum amount of time (in milliseconds) to spend retrying a request. Defaults to 5 minutes (300,000ms).
+- **`maxRetryDelayMs`**: The maximum delay (in milliseconds) between individual retry attempts. Defaults to 60 seconds (60,000ms).
 
 ### Example Configuration
 
 ```typescript
 const options = {
-  maxRetryTimeMs: 30000, // Retry for up to 30 seconds
-  maxRetryDelayMs: 2000, // Wait up to 2 seconds between retries
+  maxRetryTimeMs: 10 * 60 * 1000, // Retry for up to 10 minutes
+  maxRetryDelayMs: 60 * 1000, // Max 60 seconds between retries
+  logLevel: "debug", // See detailed retry information in logs
 };
 
 const timeZest = new TimeZestAPI("your-api-key", options);
 ```
 
-### How It Works
+### Retry Behavior Example
 
-When a request fails due to a transient error (e.g., a 429 Too Many Requests response or a network timeout), the library will automatically retry the request until the `maxRetryTimeMs` limit is reached. The delay between retries is capped by `maxRetryDelayMs` and may increase with each attempt to avoid overwhelming the server.
+If you hit a rate limit without a `Retry-After` header, the retry delays will be:
+- 1st retry: ~1 second (0.75-1.25s with jitter)
+- 2nd retry: ~2 seconds (1.5-2.5s with jitter)  
+- 3rd retry: ~4 seconds (3-5s with jitter)
+- 4th retry: ~8 seconds (6-10s with jitter)
+- 5th retry: ~16 seconds (12-20s with jitter)
+- 6th retry: ~32 seconds (24-40s with jitter)
+- 7th+ retry: ~60 seconds (45-60s with jitter, capped at maxRetryDelayMs)
 
-This retry logic ensures that your application can gracefully handle temporary issues without requiring manual intervention.
+The jitter ensures that if multiple clients hit the rate limit at the same time, they won't all retry simultaneously.
 
 ## Logging
 
