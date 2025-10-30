@@ -9,6 +9,7 @@ This Node.js module provides a convenient and fully-typed interface for interact
 - Automatic handling of paginated responses.
 - Built-in support for request retries
 - Fully typed with TypeScript for enhanced developer experience.
+- Fluent, type-safe TQL filter builder for constructing filters programmatically.
 
 ## Installation
 
@@ -78,16 +79,16 @@ The `TimeZestAPI` supports the following methods for interacting with the TimeZe
 
 ```typescript
 // Retrieve all agents
-timeZest.getAgents(filter: string | null = null): Promise<Agent[]>
+timeZest.getAgents(filter: TQLFilter | string | null = null): Promise<Agent[]>
 
 // Retrieve all appointment types
-timeZest.getAppointmentTypes(filter: string | null = null): Promise<AppointmentType[]>
+timeZest.getAppointmentTypes(filter: TQLFilter | string | null = null): Promise<AppointmentType[]>
 
 // Retrieve all resources
-timeZest.getResources(filter: string | null = null): Promise<Resource[]>
+timeZest.getResources(filter: TQLFilter | string | null = null): Promise<Resource[]>
 
 // Retreive all scheduling reuests
-timeZest.getSchedulingRequests(filter: string | null = null): Promise<SchedulingRequest[]>
+timeZest.getSchedulingRequests(filter: TQLFilter | string | null = null): Promise<SchedulingRequest[]>
 
 // Retrieve a scheduling request by id
 timeZest.getSchedulingRequest(id: string): Promise<SchedulingRequest>
@@ -96,25 +97,40 @@ timeZest.getSchedulingRequest(id: string): Promise<SchedulingRequest>
 timeZest.createSchedulingRequest(data: SchedulingRequest): Promise<SchedulingRequest>
 
 // Retrieve all teams
-timeZest.getTeams(filter: string | null = null): Promise<Team[]>
+timeZest.getTeams(filter: TQLFilter | string | null = null): Promise<Team[]>
 ```
 
-### Filtering Requests
+### Filtering Requests (TQL)
 
-Pass TQL statements into the request to filter your results
+You can filter results using TQL in two ways:
+
+- Using the fluent, type-safe TQL builder (recommended)
+- Passing a raw TQL string
+
+Both styles are supported by all list methods.
 
 ```typescript
-async function fetchTier1Team() {
-  try {
-    const teams = await timeZest.getTeams("team.internal_name EQ Tier1");
-    console.log("Teams:", teams);
-  } catch (error) {
-    console.error("Error fetching teams:", error);
-  }
-}
+import TimeZestAPI, { TQL } from "timezest";
 
-fetchTier1Team();
+const timeZest = new TimeZestAPI("your-api-key");
+
+// 1) Type-safe builder with autocomplete
+const teams = await timeZest.getTeams(
+  TQL.forTeams().filter("internal_name").eq("Tier1")
+);
+
+// You can also chain logical operators
+const scheduledRequests = await timeZest.getSchedulingRequests(
+  TQL.forSchedulingRequests()
+    .filter("status").eq("scheduled")
+    .and("end_user_email").like("@example.com")
+);
+
+// 2) Raw TQL string
+const teamsByString = await timeZest.getTeams("team.internal_name EQ Tier1");
 ```
+
+For more about TQL syntax, see the TimeZest TQL documentation: `https://developer.timezest.com/tql/`.
 
 ### Paginated Requests
 
