@@ -85,7 +85,7 @@ export class TQLFilter<TAttribute extends string = string> {
     this.entityPrefix = entityPrefix || null;
   }
 
-  private currentAttribute: TAttribute;
+  private currentAttribute: TAttribute | '';
   private currentOperator: TQLOperator | null = null;
   private currentValue: string | number | string[] | number[] | null = null;
 
