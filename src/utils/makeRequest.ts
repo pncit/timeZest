@@ -67,6 +67,7 @@ export async function makeRequest<T>(
             } else {
               retryAfterMs = Math.max(0, retryDate.getTime() - Date.now());
             }
+          }
         } else {
           // No Retry-After header - use aggressive exponential backoff
           // Start at 1 second, grow rapidly: 1s, 2s, 4s, 8s, 16s, 32s, 64s
