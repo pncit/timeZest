@@ -301,7 +301,7 @@ export class TQLFilter<TAttribute extends string = string> {
         // Toggle quote state
         insideQuotes = !insideQuotes;
         result += char;
-      } else if (char === ' ' || char === '\t' || char === '\n') {
+      } else if (/\s/.test(char)) {
         // Only replace whitespace if we're NOT inside quotes
         result += insideQuotes ? char : '~';
       } else {
