@@ -142,7 +142,7 @@ The `TimeZestAPI` class includes intelligent retry logic optimized for TimeZest'
 When a request fails due to rate limiting (429 Too Many Requests), the library automatically retries with an optimized strategy:
 
 - **Aggressive Exponential Backoff**: Starts at 1 second and doubles with each retry (1s, 2s, 4s, 8s, 16s, 32s, 64s...)
-- **Jitter**: Adds ±25% random variation to retry delays to prevent thundering herd problems when multiple clients hit rate limits simultaneously
+- **Jitter**: Adds ±25% random variation to retry delays to prevent a thundering herd problem when multiple clients hit rate limits simultaneously
 - **Retry-After Header**: Always respects the `Retry-After` header from 429 responses when provided by the API
 - **Patient by Default**: Will retry for up to 5 minutes by default, allowing time for rate limit windows to clear
 - **Configurable**: Full control over retry behavior via configuration options
