@@ -45,4 +45,4 @@ jobs:
           echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:0:20}..."
       
       - name: Publish package
-        run: npm run publish
+        run: npm publish

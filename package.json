@@ -1,13 +1,13 @@
 {
   "name": "timezest",
   "version": "1.1.5",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "format": "prettier --write .",
     "clean": "rm -rf dist",
-    "prep-publish": "npm run clean && npm run build && cp package.json dist/package.json && cp README.md dist/README.md && cp LICENSE dist/LICENSE",
-    "publish": "npm run prep-publish && npm publish ./dist"
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [],
   "author": "",
