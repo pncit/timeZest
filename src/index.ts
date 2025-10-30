@@ -23,8 +23,21 @@ import { makePaginatedRequest } from "./utils/makePaginatedRequest";
 import { ZodSchema } from "zod";
 import { TQLFilter } from "./utils/tqlFilter";
 
-export { Agent, Resource, AppointmentType, SchedulingRequest, SchedulingRequestPost, Team } from "./entities/entities";
-export { ResourceSchema, AgentSchema, AppointmentTypeSchema, SchedulingRequestSchema, TeamSchema } from "./entities/schemas";
+export {
+  Agent,
+  Resource,
+  AppointmentType,
+  SchedulingRequest,
+  SchedulingRequestPost,
+  Team,
+} from "./entities/entities";
+export {
+  ResourceSchema,
+  AgentSchema,
+  AppointmentTypeSchema,
+  SchedulingRequestSchema,
+  TeamSchema,
+} from "./entities/schemas";
 export { TQL, TQLFilter } from "./utils/tqlFilter";
 
 /**
@@ -72,7 +85,10 @@ export class TimeZestAPI {
       baseUrl: options?.baseUrl || CONFIG.baseUrl,
       maxRetryDelayMs: options?.maxRetryDelayMs || CONFIG.maxRetryDelayMs,
       maxRetryTimeMs: options?.maxRetryTimeMs || CONFIG.maxRetryTimeMs,
-      outputValidation: options?.outputValidation !== undefined ? options.outputValidation : CONFIG.outputValidation
+      outputValidation:
+        options?.outputValidation !== undefined
+          ? options.outputValidation
+          : CONFIG.outputValidation,
     };
     this.log = buildLogger(this.config.logger, this.config.logLevel);
     // Log the initialization of the API client but remove apiKey
@@ -130,7 +146,9 @@ export class TimeZestAPI {
    * @param {TQLFilter | string | null} [filter=null] - Optional filter (TQLFilter instance or string) to narrow down results.
    * @returns {Promise<Resource[]>} A promise that resolves to an array of resources.
    */
-  getResources = async (filter: TQLFilter | string | null = null): Promise<Resource[]> => {
+  getResources = async (
+    filter: TQLFilter | string | null = null,
+  ): Promise<Resource[]> => {
     const response = await makePaginatedRequest<Resource>(
       this,
       API_ENDPOINTS.RESOURCES,

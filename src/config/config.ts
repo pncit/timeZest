@@ -37,7 +37,7 @@ export interface TimeZestAPIConfig {
 
 /**
  * Default configuration for the TimeZest API client.
- * 
+ *
  * Rate limit: 180 requests per 60 seconds (sliding window)
  * Retry strategy: Aggressive exponential backoff with jitter
  */

@@ -35,7 +35,7 @@ export async function makeRequest<T>(
         "debug",
         `Attempting request to ${endpoint}. Retry count: ${retries}`,
       );
-      
+
       const response = await axios({
         url: `${baseUrl}${endpoint}`,
         method,
@@ -51,7 +51,7 @@ export async function makeRequest<T>(
         // Parse Retry-After header (can be in seconds or HTTP date format)
         let retryAfterMs: number;
         const retryAfterHeader = error.response.headers["retry-after"];
-        
+
         if (retryAfterHeader) {
           const retryAfterSeconds = parseInt(retryAfterHeader, 10);
           if (!isNaN(retryAfterSeconds)) {
@@ -72,7 +72,7 @@ export async function makeRequest<T>(
           // No Retry-After header - use aggressive exponential backoff
           // Start at 1 second, grow rapidly: 1s, 2s, 4s, 8s, 16s, 32s, 64s
           const baseDelayMs = Math.pow(2, retries) * 1000;
-          
+
           // Add jitter (random ±25%) to prevent thundering herd
           // If multiple clients hit 429 at the same time, they'll retry at different times
           const jitterFactor = 0.75 + Math.random() * 0.5; // Random between 0.75 and 1.25
@@ -89,9 +89,9 @@ export async function makeRequest<T>(
 
         log(
           "warn",
-          `Rate limited (429) on ${endpoint}. Retrying after ${(retryAfterMs/1000).toFixed(2)} seconds... (attempt ${retries + 1})`,
+          `Rate limited (429) on ${endpoint}. Retrying after ${(retryAfterMs / 1000).toFixed(2)} seconds... (attempt ${retries + 1})`,
         );
-        
+
         await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
         totalElapsedTime += retryAfterMs;
         retries++;
@@ -105,5 +105,7 @@ export async function makeRequest<T>(
     }
   }
 
-  throw new Error(`Max retry time of ${(maxRetryTimeMs / 1000)} seconds exceeded for ${endpoint}`);
+  throw new Error(
+    `Max retry time of ${maxRetryTimeMs / 1000} seconds exceeded for ${endpoint}`,
+  );
 }

@@ -1,23 +1,22 @@
 {
   "name": "timezest",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
     "test": "node dist/src/tests/test.js",
     "format": "prettier --write .",
-    "clean": "if exist dist rmdir /s /q dist",
-    "prep-publish": "npm run clean && npm run build && copy package.json dist\\package.json && copy README.md dist\\README.md && copy LICENSE dist\\LICENSE",
-    "publish": "npm run prep-publish && npm publish .\\dist"
+    "clean": "rm -rf dist",
+    "prep-publish": "npm run clean && npm run build && cp package.json dist/package.json && cp README.md dist/README.md && cp LICENSE dist/LICENSE",
+    "publish": "npm run prep-publish && npm publish ./dist"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "axios": "^1.9.0",
-    "dotenv": "^16.5.0",
-    "zod": "^3.24.3"
+    "axios": "^1.13.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

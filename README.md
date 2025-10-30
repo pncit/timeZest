@@ -169,8 +169,9 @@ const timeZest = new TimeZestAPI("your-api-key", options);
 ### Retry Behavior Example
 
 If you hit a rate limit without a `Retry-After` header, the retry delays will be:
+
 - 1st retry: ~1 second (0.75-1.25s with jitter)
-- 2nd retry: ~2 seconds (1.5-2.5s with jitter)  
+- 2nd retry: ~2 seconds (1.5-2.5s with jitter)
 - 3rd retry: ~4 seconds (3-5s with jitter)
 - 4th retry: ~8 seconds (6-10s with jitter)
 - 5th retry: ~16 seconds (12-20s with jitter)
