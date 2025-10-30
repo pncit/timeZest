@@ -74,7 +74,7 @@ export class TQLFilter<TAttribute extends string = string> {
   private predicates: TQLPredicate[] = [];
   private logicalOperators: LogicalOperator[] = [];
   private entityPrefix: string | null = null;
-  private currentAttribute: TAttribute | '';
+  private currentAttribute: TAttribute | null = null;
   private currentOperator: TQLOperator | null = null;
   private currentValue: string | number | string[] | number[] | null = null;
 
@@ -99,7 +99,7 @@ export class TQLFilter<TAttribute extends string = string> {
         value: this.currentValue,
       });
     }
-    this.currentAttribute = '';
+    this.currentAttribute = null;
     this.currentOperator = null;
     this.currentValue = null;
   }
