@@ -105,7 +105,5 @@ export async function makeRequest<T>(
     }
   }
 
-  throw new Error(
-    `Max retry time of ${maxRetryTimeMs/1000} seconds exceeded for ${endpoint}`,
-  );
+  throw new Error(`Max retry time of ${(maxRetryTimeMs / 1000)} seconds exceeded for ${endpoint}`);
 }
