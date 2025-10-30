@@ -37,12 +37,15 @@ export interface TimeZestAPIConfig {
 
 /**
  * Default configuration for the TimeZest API client.
+ * 
+ * Rate limit: 180 requests per 60 seconds (sliding window)
+ * Retry strategy: Aggressive exponential backoff with jitter
  */
 export const CONFIG: TimeZestAPIConfig = {
   logLevel: "error",
   logger: defaultLogger,
   baseUrl: "https://api.timezest.com/v1",
-  maxRetryDelayMs: 1.5 * 60 * 1000, // 1.5 minutes
-  maxRetryTimeMs: 15 * 1000, // 15 seconds
+  maxRetryDelayMs: 60 * 1000, // 60 seconds (aligned with rate limit window)
+  maxRetryTimeMs: 5 * 60 * 1000, // 5 minutes (be patient with retries)
   outputValidation: true,
 };
