@@ -59,8 +59,14 @@ export async function makeRequest<T>(
           } else {
             // HTTP date format - calculate difference
             const retryDate = new Date(retryAfterHeader);
-            retryAfterMs = Math.max(0, retryDate.getTime() - Date.now());
-          }
+            if (isNaN(retryDate.getTime())) {
+              // Invalid date, fall back to exponential backoff
+              const baseDelayMs = Math.pow(2, retries) * 1000;
+              const jitterFactor = 0.75 + Math.random() * 0.5; // Random between 0.75 and 1.25
+              retryAfterMs = baseDelayMs * jitterFactor;
+            } else {
+              retryAfterMs = Math.max(0, retryDate.getTime() - Date.now());
+            }
         } else {
           // No Retry-After header - use aggressive exponential backoff
           // Start at 1 second, grow rapidly: 1s, 2s, 4s, 8s, 16s, 32s, 64s
