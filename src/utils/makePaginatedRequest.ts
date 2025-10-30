@@ -2,6 +2,7 @@ import { makeRequest } from "./makeRequest";
 import { handleError } from "./handleError";
 import { apiEndpoint } from "../constants/endpoints";
 import { TimeZestAPI } from "../index";
+import { TQLFilter, normalizeFilter } from "./tqlFilter";
 
 /**
  * Makes a paginated API request.
@@ -10,7 +11,7 @@ import { TimeZestAPI } from "../index";
  * @param endpoint - The API endpoint to call.
  * @param method - The HTTP method (GET or POST).
  * @param data - The request payload.
- * @param filter - An optional filter string.
+ * @param filter - An optional filter string or TQLFilter instance.
  * @returns A promise that resolves to an array of response data.
  */
 export const makePaginatedRequest = async <T>(
@@ -18,7 +19,7 @@ export const makePaginatedRequest = async <T>(
   endpoint: apiEndpoint,
   method: "GET" | "POST" = "GET",
   data: any = null,
-  filter: string | null = null,
+  filter: TQLFilter | string | null = null,
 ): Promise<T[]> => {
   const { log } = apiInstance;
   const apiKey = apiInstance.getApiKey();
@@ -40,7 +41,7 @@ export const makePaginatedRequest = async <T>(
           baseUrl,
           endpoint,
           method,
-          { ...data, filter, page: nextPage },
+          { ...data, filter: normalizeFilter(filter), page: nextPage },
           maxRetryTimeMs,
           maxRetryDelayMs,
         );
