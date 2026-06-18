@@ -1,8 +1,12 @@
 {
   "name": "timezest",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "main": "dist/index.js",
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "format": "prettier --write .",
