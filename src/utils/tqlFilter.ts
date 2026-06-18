@@ -390,7 +390,7 @@ export class TQLFilter<TAttribute extends string = string> {
    * Custom primitive conversion for string contexts.
    * Allows TQLFilter to be used directly in places expecting strings.
    */
-  [Symbol.toPrimitive](hint: "string" | "number" | "default"): string {
+  [Symbol.toPrimitive](_hint: "string" | "number" | "default"): string {
     return this.toString();
   }
 }

@@ -116,15 +116,17 @@ export function withLogging<T>(
 ): (...args: any[]) => Promise<T> {
   return async (...args: any[]) => {
     instance.log("debug", `Entering ${functionName}`);
-    args ? instance.log("silly", `Entering ${functionName}`, { args }) : null;
+    if (args) {
+      instance.log("silly", `Entering ${functionName}`, { args });
+    }
     try {
       const result = await fn(...args);
       instance.log("debug", `Exiting ${functionName} successfully`);
-      result
-        ? instance.log("silly", `Exiting ${functionName} successfully`, {
-            result,
-          })
-        : null;
+      if (result) {
+        instance.log("silly", `Exiting ${functionName} successfully`, {
+          result,
+        });
+      }
       return result;
     } catch (error) {
       instance.log("error", `Error in ${functionName}`, { error });

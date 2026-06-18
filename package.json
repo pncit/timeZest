@@ -1,15 +1,22 @@
 {
   "name": "timezest",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "main": "dist/index.js",
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "format": "prettier --write .",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build"
   },
@@ -22,9 +29,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "prettier": "^3.5.3",
+    "@eslint/js": "^9.0.0",
     "@types/node": "^22.15.3",
-    "typescript": "^5.8.3"
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.0.0"
   },
   "repository": {
     "type": "git",
