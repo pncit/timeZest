@@ -1,7 +1,7 @@
 # Local composite actions
 
-These are **local mirrors** of composite actions from the private
-[`pncit/shared-actions`](https://github.com/pncit/shared-actions) repo.
+These are **local mirrors** (vendored copies) of composite actions from the
+private [`pncit/shared-actions`](https://github.com/pncit/shared-actions) repo.
 
 ## Why they're copied here
 
@@ -12,18 +12,18 @@ reference actions that live in a **private** repo, so it cannot `uses:`
 actions into this repo under `.github/actions/` sidesteps that — a repo-local
 action (`uses: ./.github/actions/<name>`) has no visibility restriction.
 
+This mirrors how the sibling public repo
+[`pncit/node-quickbooks`](https://github.com/pncit/node-quickbooks) handles the
+same constraint — keep the two in step.
+
 ## Keeping them in sync (manual)
 
-When the upstream action changes in `pncit/shared-actions`, re-copy it here and
-re-apply the small public-repo tweaks noted in each file's header comment.
+When an action changes in `pncit/shared-actions`, re-copy it here verbatim. The
+copies are intentionally byte-for-byte identical to upstream (apart from the
+header comment) so a sync is a trivial file diff — do **not** locally
+"optimize" inputs or steps; consistency with upstream is the point.
 
-| local action | upstream | public-repo tweaks |
-|---|---|---|
-| `validate-codebase/action.yml` | `pncit/shared-actions/.github/actions/validate-codebase` | `npm-token` made optional (deps are public) |
-
-## Intentionally NOT mirrored
-
-- **`verify-node-toolchain`** — it reads org-level Actions variables
-  (`NODE_MAJOR_VERSION` / `NPM_MAJOR_VERSION`) that may not be visible to a
-  public repo, and `actions/setup-node` with `.nvmrc` already pins the Node
-  version in every job, making the check redundant here.
+| local action | upstream |
+|---|---|
+| `validate-codebase/action.yml` | `pncit/shared-actions/.github/actions/validate-codebase` |
+| `verify-node-toolchain/action.yml` | `pncit/shared-actions/.github/actions/verify-node-toolchain` |

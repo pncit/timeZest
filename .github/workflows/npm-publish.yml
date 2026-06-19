@@ -1,47 +1,59 @@
-name: publish-on-version-bump
+name: Publish
 
+# Consumes the Validate workflow's result instead of re-validating: publish
+# only fires after a successful Validate run on main, and it ships the exact
+# SHA that Validate ran against. A new push re-runs Validate (and thus a fresh
+# publish); publish can never run without a successful validation for that
+# commit.
+#
+# NOTE: `workflows:` below must match the Validate workflow's `name:` field.
 on:
-  push:
+  workflow_run:
+    workflows: ['Validate']
+    types: [completed]
     branches: [main]
+  # Manual recovery — e.g. re-publishing main after a transient registry error.
+  # Skips the workflow_run gate; operator's call.
+  workflow_dispatch:
 
 permissions:
-  id-token: write # Required for OIDC
+  id-token: write # Required for OIDC trusted publishing
   contents: read
 
-# The npm CI gates live in a local composite action,
-# .github/actions/validate-codebase — a mirror of the private
-# pncit/shared-actions action (timezest is public and can't reference the
-# private repo). See .github/actions/README.md. Runs on self-hosted runners;
-# this workflow only triggers on push to main (post-merge, trusted), so no
-# fork-PR exposure.
+# Serialize publishes: a newer publish supersedes an in-progress older one.
+concurrency:
+  group: publish-timezest
+  cancel-in-progress: true
 
 jobs:
-  # Validate the actual commit that landed on main BEFORE publishing. The PR's
-  # validation ran against the PR head, but a squash/merge produces a new commit
-  # that was never validated as-is — so we re-validate here. publish `needs` this
-  # job, so a validation failure now blocks the publish.
-  validate:
-    runs-on: self-hosted
-    steps:
-      # Checkout first so the local ./.github/actions/validate-codebase action
-      # exists on disk before it's referenced.
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/validate-codebase
-        with:
-          npm-token: ${{ secrets.NPM_TOKEN }}
-
   publish:
-    needs: validate
+    # Only on a successful Validate that ran on main via push, or a manual
+    # dispatch. PR-branch Validate runs are filtered out here.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.head_branch == 'main'
+        && github.event.workflow_run.event == 'push')
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          # Pin to the commit Validate ran against, not main's current HEAD, so
+          # a commit landing between Validate's success and this trigger can't
+          # ship unvalidated. Empty for workflow_dispatch → falls back to the
+          # default ref.
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+
       # timezest is an unscoped, public package, so no `scope:` override and no
       # publishConfig.access — plain `npm publish` ships it public via OIDC.
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
-          node-version-file: .nvmrc
+          node-version: '24'
           registry-url: https://registry.npmjs.org
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
 
       # npm 11.5.1+ is required for OIDC trusted publishing.
       - name: Update npm
@@ -50,8 +62,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Unlike node-quickbooks (ships JS directly), timezest compiles to dist/
+      # via tsc before publishing.
       - name: Build
         run: npm run build
 
+      # `npm publish` is a no-op failure if the version already exists, so a
+      # push without a version bump simply doesn't release.
       - name: Publish to npm
         run: npm publish
