@@ -1,48 +1,73 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+name: Publish
 
-name: Node.js Package
-
+# Consumes the Validate workflow's result instead of re-validating: publish
+# only fires after a successful Validate run on main, and it ships the exact
+# SHA that Validate ran against. A new push re-runs Validate (and thus a fresh
+# publish); publish can never run without a successful validation for that
+# commit.
+#
+# NOTE: `workflows:` below must match the Validate workflow's `name:` field.
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['Validate']
+    types: [completed]
+    branches: [main]
+  # Manual recovery — e.g. re-publishing main after a transient registry error.
+  # Skips the workflow_run gate; operator's call.
+  workflow_dispatch:
 
 permissions:
-  id-token: write # Required for OIDC
+  id-token: write # Required for OIDC trusted publishing
   contents: read
+
+# Serialize publishes: a newer publish supersedes an in-progress older one.
+concurrency:
+  group: publish-timezest
+  cancel-in-progress: true
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    # Only on a successful Validate that ran on main via push, or a manual
+    # dispatch. PR-branch Validate runs are filtered out here.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success'
+        && github.event.workflow_run.head_branch == 'main'
+        && github.event.workflow_run.event == 'push')
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          # Pin to the commit Validate ran against, not main's current HEAD, so
+          # a commit landing between Validate's success and this trigger can't
+          # ship unvalidated. Empty for workflow_dispatch → falls back to the
+          # default ref.
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
 
-      # Ensure npm 11.5.1 or later is installed for OIDC support
+      # timezest is an unscoped, public package, so no `scope:` override and no
+      # publishConfig.access — plain `npm publish` ships it public via OIDC.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+
+      # npm 11.5.1+ is required for OIDC trusted publishing.
       - name: Update npm
         run: npm install -g npm@latest
 
-      # Clear any existing npm auth config that might interfere with OIDC
-      - name: Clear npm auth config
-        run: |
-          npm config delete //registry.npmjs.org/:_authToken || true
-          npm config delete always-auth || true
-
       - name: Install dependencies
         run: npm ci
-      
-      # Verify npm version and OIDC support
-      - name: Verify npm version
-        run: |
-          npm --version
-          echo "NODE_VERSION: $NODE_VERSION"
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL: $ACTIONS_ID_TOKEN_REQUEST_URL"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:0:20}..."
-      
-      - name: Publish package
+
+      # Unlike node-quickbooks (ships JS directly), timezest compiles to dist/
+      # via tsc before publishing.
+      - name: Build
+        run: npm run build
+
+      # `npm publish` is a no-op failure if the version already exists, so a
+      # push without a version bump simply doesn't release.
+      - name: Publish to npm
         run: npm publish

@@ -1,0 +1,97 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  # Also runs on the merge commit so npm-publish.yml can consume this run's
+  # `workflow_run` success instead of re-validating. Running validation here
+  # (not in the publish workflow) means publish never ships a commit that
+  # wasn't validated as-is, and validation is never duplicated.
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    # Push events (merge to main) always validate — that run is what gates
+    # publishing. PR events only run for the repo's own team; fork/outside PRs
+    # skip the job so untrusted code never reaches the self-hosted runner.
+    # Dependabot is allowed through: its PRs come from in-repo branches (no
+    # fork code), so they're safe on self-hosted and should be validated at PR
+    # time. (Divergence from node-quickbooks, which validates dependabot only
+    # on the post-merge push.)
+    # NOTE: author_association only exists on pull_request events, so the push
+    # path must be allowed explicitly or publishing (which needs a successful
+    # Validate on push) would never fire.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.actor == 'dependabot[bot]' ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: self-hosted
+    steps:
+      # Up-front checkout: required so the local composite actions
+      # (./.github/actions/*) exist on the runner before they're referenced,
+      # and gives the version-bump step the base branch to diff against.
+      # The vendored actions live here (not in the private pncit/shared-actions)
+      # because this repo is PUBLIC and can't reference a private action.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      # Env check: fail fast if the runner's Node/npm majors don't match what
+      # the repo expects (NODE_MAJOR_VERSION / NPM_MAJOR_VERSION are pncit
+      # org-level Actions variables).
+      - uses: ./.github/actions/verify-node-toolchain
+        with:
+          node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
+          npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
+
+      # Version-bump gate (PRs only): timezest is a published library, so every
+      # PR into main must bump package.json's version.
+      #
+      # Dependabot PRs are exempt: they bump dependency versions, never the
+      # package's own version (that happens at release time), so this gate
+      # would fail 100% of them.
+      - name: Verify version changed
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CUR=$(node -p "require('./package.json').version || ''")
+
+          # Get the base branch (usually main)
+          BASE_BRANCH="${GITHUB_BASE_REF:-main}"
+          git fetch origin "$BASE_BRANCH:$BASE_BRANCH" || true
+
+          if git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+            PREV=$(git show "$BASE_BRANCH:package.json" 2>/dev/null \
+              | node -p "(() => { const s=require('fs').readFileSync(0,'utf8'); try { return JSON.parse(s).version || '' } catch { return '' } })()" \
+              || true)
+          else
+            PREV=""
+          fi
+
+          if [ -z "$CUR" ]; then
+            echo "::error::No version found in package.json"
+            exit 1
+          fi
+
+          if [ -n "$PREV" ] && [ "$CUR" = "$PREV" ]; then
+            echo "::error::package.json version unchanged ($PREV -> $CUR). Version must be bumped for PRs."
+            exit 1
+          fi
+
+          if [ -z "$PREV" ]; then
+            echo "Could not determine previous version, skipping version check"
+          else
+            echo "Version changed: $PREV -> $CUR ✓"
+          fi
+
+      # Codebase checks: npm ci + lint + typecheck + test. This action does its
+      # own checkout + setup-node (node-version-file: .nvmrc) and matches the
+      # @pncit scope / npmjs registry by default.
+      - uses: ./.github/actions/validate-codebase
+        with:
+          npm-token: ${{ secrets.NPM_TOKEN }}
