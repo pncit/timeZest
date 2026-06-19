@@ -7,6 +7,9 @@ name: Publish
 # commit.
 #
 # NOTE: `workflows:` below must match the Validate workflow's `name:` field.
+#
+# Validate runs on self-hosted, but this publish job runs on a GitHub-hosted
+# runner — required for OIDC provenance on a public package (see the job).
 on:
   workflow_run:
     workflows: ['Validate']
@@ -34,7 +37,14 @@ jobs:
       (github.event.workflow_run.conclusion == 'success'
         && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.event == 'push')
-    runs-on: self-hosted
+    # GitHub-hosted, NOT self-hosted (unlike node-quickbooks). timezest is a
+    # PUBLIC package, so npm auto-generates an OIDC provenance attestation on
+    # publish — and npm only supports provenance from GitHub-hosted runners
+    # ("Unsupported GitHub Actions runner environment: self-hosted"). A
+    # self-hosted publish fails with HTTP 422. node-quickbooks avoids this only
+    # because it's a restricted (private) package, which never gets provenance.
+    # This job is post-merge trusted code, so there's no fork-PR exposure.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
@@ -46,7 +56,8 @@ jobs:
           fetch-depth: 2
 
       # timezest is an unscoped, public package, so no `scope:` override and no
-      # publishConfig.access — plain `npm publish` ships it public via OIDC.
+      # publishConfig.access — plain `npm publish` ships it public via OIDC
+      # (with provenance, since this runs on a GitHub-hosted runner).
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
