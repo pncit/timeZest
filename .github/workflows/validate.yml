@@ -10,34 +10,28 @@ on:
 permissions:
   contents: read
 
+# Self-contained on GitHub-hosted runners. timezest is a PUBLIC repo, so it
+# can't consume the org's private pncit/shared-actions composite actions
+# (GitHub blocks public repos from referencing private-repo actions), and
+# running a public repo on self-hosted runners is discouraged (fork PRs would
+# execute on org infra). So the same gates the shared `validate-codebase`
+# action runs — npm ci + lint + typecheck + test — are inlined here.
+
 jobs:
   validate:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      # Env check: fail fast if the runner's Node/npm majors don't match
-      # what the repo expects (NODE_MAJOR_VERSION / NPM_MAJOR_VERSION are
-      # pncit org-level Actions variables).
-      - uses: pncit/shared-actions/.github/actions/verify-node-toolchain@v1
+      - uses: actions/checkout@v4
         with:
-          node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
-          npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
+          fetch-depth: 2
 
       # Version-bump gate (PRs only): timezest is a published library, so every
-      # PR into main must bump package.json's version. Needs its own checkout
-      # with a little history because validate-codebase's internal checkout
-      # comes later and is shallow. fetch-depth: 2 + an explicit fetch of the
-      # base branch gives us the base package.json to diff against.
+      # PR into main must bump package.json's version.
       #
       # Dependabot PRs are exempt: they only bump dependency versions, never
       # the package's own version (that happens at release time), so this gate
       # would fail 100% of them. The version bump is applied when the batched
       # dependency updates are released.
-      - name: Checkout (for version-bump check)
-        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
       - name: Verify version changed
         if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
         shell: bash
@@ -73,8 +67,19 @@ jobs:
             echo "Version changed: $PREV -> $CUR ✓"
           fi
 
-      # Codebase checks: npm ci + lint + typecheck + test. This action does
-      # its own checkout + setup-node (node-version-file: .nvmrc).
-      - uses: pncit/shared-actions/.github/actions/validate-codebase@v1
+      - uses: actions/setup-node@v5
         with:
-          npm-token: ${{ secrets.NPM_TOKEN }}
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test

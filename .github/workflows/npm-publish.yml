@@ -8,41 +8,45 @@ permissions:
   id-token: write # Required for OIDC
   contents: read
 
+# Self-contained on GitHub-hosted runners — see validate.yml for why timezest
+# inlines the gates instead of using pncit/shared-actions.
+
 jobs:
   # Validate the actual commit that landed on main BEFORE publishing. The PR's
   # validation ran against the PR head, but a squash/merge produces a new commit
   # that was never validated as-is — so we re-validate here. publish `needs` this
   # job, so a validation failure now blocks the publish.
   validate:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - uses: pncit/shared-actions/.github/actions/verify-node-toolchain@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
         with:
-          node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
-          npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
-
-      # npm ci + lint + typecheck + test. Does its own checkout + setup-node.
-      - uses: pncit/shared-actions/.github/actions/validate-codebase@v1
-        with:
-          npm-token: ${{ secrets.NPM_TOKEN }}
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
 
   publish:
     needs: validate
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
       # timezest is an unscoped, public package, so no `scope:` override and no
       # publishConfig.access — plain `npm publish` ships it public via OIDC.
       - uses: actions/setup-node@v5
         with:
-          node-version: '24'
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
 
+      # npm 11.5.1+ is required for OIDC trusted publishing.
       - name: Update npm
         run: npm install -g npm@latest
 
