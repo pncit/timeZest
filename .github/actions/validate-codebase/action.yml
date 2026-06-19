@@ -5,9 +5,9 @@ description: >-
   expected to be defined as a script in the repo's package.json.
 
 # Vendored from pncit/shared-actions@v1 because this repo is PUBLIC and
-# shared-actions is PRIVATE — a public repo can't reference a private action
-# (and external fork PRs never can). Keep in sync manually if the upstream
-# action changes. See .github/actions/README.md.
+# shared-actions is PRIVATE — a public repo can't reliably clone a
+# private action (and external fork PRs never can). Keep in sync manually if
+# the upstream action changes.
 #
 # Does its own checkout + setup-node so it's self-contained — invoke
 # directly from a job's `steps:` with just `uses:` and the npm-token.

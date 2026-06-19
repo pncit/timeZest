@@ -26,20 +26,21 @@ jobs:
     # payload, which would wrongly skip our own team's PRs. head.repo is null
     # for deleted forks, so the comparison safely fails closed (skips).
     #
-    # Dependabot is allowed explicitly: it opens in-repo branch PRs (so it
-    # already satisfies the head-repo check) and runs as a trusted, non-
-    # spoofable GitHub actor with a read-only token.
+    # Dependabot PRs use in-repo branches, so they satisfy the head-repo check
+    # and still RUN here (we want their test coverage) — but they are NOT
+    # exempt from the version-bump gate below, so they fail until a human turns
+    # the dependency update into a real, version-bumped release. That keeps
+    # main from drifting out of sync with what's published to npm.
     if: >-
       github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository ||
-      github.actor == 'dependabot[bot]'
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
     steps:
       # Up-front checkout: required so the local composite actions
       # (./.github/actions/*) exist on the runner before they're referenced,
       # and gives the version-bump step the base branch to diff against.
       # The vendored actions live here (not in the private pncit/shared-actions)
-      # because this repo is PUBLIC and can't reference a private action.
+      # because this repo is PUBLIC and can't clone a private action.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
@@ -52,11 +53,12 @@ jobs:
           node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
           npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
 
-      # Version-bump gate (PRs only): timezest is a published library, so every
-      # PR into main must bump package.json's version. Unlike node-quickbooks,
-      # dependabot is NOT exempt here — a dependency bump that doesn't also bump
-      # the package version fails this step and can't merge. This keeps main
-      # from ever diverging from npm (every commit on main is a new release).
+      # Version-bump gate: timezest is a published library, so every PR into
+      # main must bump package.json's version — no exceptions. Dependabot PRs
+      # don't bump the package's own version, so they fail here by design; a
+      # maintainer rolls the dependency update into a versioned release (bumping
+      # the version) to land it. This prevents an unversioned change from
+      # merging and desyncing main from the published npm package.
       - name: Verify version changed
         if: github.event_name == 'pull_request'
         shell: bash
