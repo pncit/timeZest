@@ -2,9 +2,15 @@ name: Publish
 
 # Consumes the Validate workflow's result instead of re-validating: publish
 # only fires after a successful Validate run on main, and it ships the exact
-# SHA that Validate ran against. A new push re-runs Validate (and thus a fresh
-# publish); publish can never run without a successful validation for that
-# commit.
+# SHA that Validate ran against.
+#
+# Footprint policy: validate (every PR + push) runs on self-hosted. Only the
+# actual `npm publish` runs on a GitHub-hosted runner, and only when there's a
+# new version to release — see the two-job split below. timezest is PUBLIC, so
+# npm attaches an OIDC provenance attestation on publish, which npm only allows
+# from GitHub-hosted runners (self-hosted → HTTP 422). Gating on a real version
+# bump keeps GitHub-hosted minutes to actual releases; no-op/dependabot merges
+# never reach the hosted job.
 #
 # NOTE: `workflows:` below must match the Validate workflow's `name:` field.
 on:
@@ -16,8 +22,6 @@ on:
   # Skips the workflow_run gate; operator's call.
   workflow_dispatch:
 
-# No id-token: this job authenticates with a classic npm token, not OIDC
-# (see the publish job for why OIDC isn't usable here).
 permissions:
   contents: read
 
@@ -27,33 +31,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  publish:
-    # Only on a successful Validate that ran on main via push, or a manual
-    # dispatch. PR-branch Validate runs are filtered out here.
+  # Cheap gate on SELF-HOSTED: only proceed to the GitHub-hosted publish when
+  # package.json's version isn't already on npm. This is what keeps hosted
+  # minutes to real releases — a push without a version bump (e.g. a dependabot
+  # merge) stops here.
+  check:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success'
         && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.event == 'push')
-    # Runs on SELF-HOSTED, like the rest of the pipeline. timezest is a PUBLIC
-    # package, which rules out OIDC trusted publishing here: npm forces a
-    # provenance attestation for public packages under OIDC, and provenance is
-    # only supported on GitHub-hosted runners (self-hosted → HTTP 422). So this
-    # job authenticates with a classic npm automation token (NODE_AUTH_TOKEN)
-    # and publishes WITHOUT provenance. (node-quickbooks can use OIDC on
-    # self-hosted only because it's a restricted package, which gets no
-    # provenance. timezest being public is the difference.)
-    #
-    # Requires secrets.NPM_TOKEN to be an automation/granular token with
-    # publish rights to the `timezest` package.
     runs-on: self-hosted
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      version: ${{ steps.decide.outputs.version }}
     steps:
       - uses: actions/checkout@v6
         with:
-          # Pin to the commit Validate ran against, not main's current HEAD, so
-          # a commit landing between Validate's success and this trigger can't
-          # ship unvalidated. Empty for workflow_dispatch → falls back to the
-          # default ref.
+          # Pin to the commit Validate ran against. Empty for workflow_dispatch
+          # → falls back to the default ref (main).
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - id: decide
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "$NAME" version 2>/dev/null || echo "")
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if [ "$VER" = "$PUBLISHED" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VER is already on npm — nothing to publish, skipping the hosted job."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "Will publish $NAME@$VER (npm currently has ${PUBLISHED:-none})."
+          fi
+
+  # The ONLY GitHub-hosted job, and only when `check` says there's a new
+  # version. Hosted is required for OIDC trusted publishing + provenance on a
+  # public package. Post-merge trusted code, so no fork-PR exposure.
+  publish:
+    needs: check
+    if: needs.check.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC trusted publishing + provenance
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
 
@@ -67,6 +93,10 @@ jobs:
           cache-dependency-path: |
             package-lock.json
 
+      # npm 11.5.1+ is required for OIDC trusted publishing + provenance.
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: Install dependencies
         run: npm ci
 
@@ -75,12 +105,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Token auth via NODE_AUTH_TOKEN (the registry-url above wires it into
-      # .npmrc). No --provenance: it's off by default with token auth, and
-      # can't be used from self-hosted anyway. `npm publish` is a no-op failure
-      # if the version already exists, so a push without a version bump simply
-      # doesn't release.
       - name: Publish to npm
-        run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance
