@@ -8,9 +8,12 @@ permissions:
   id-token: write # Required for OIDC
   contents: read
 
-# Self-contained — see validate.yml for why timezest inlines the gates instead
-# of using pncit/shared-actions. Runs on self-hosted runners; this workflow
-# only triggers on push to main (post-merge, trusted), so no fork-PR exposure.
+# The npm CI gates live in a local composite action,
+# .github/actions/validate-codebase — a mirror of the private
+# pncit/shared-actions action (timezest is public and can't reference the
+# private repo). See .github/actions/README.md. Runs on self-hosted runners;
+# this workflow only triggers on push to main (post-merge, trusted), so no
+# fork-PR exposure.
 
 jobs:
   # Validate the actual commit that landed on main BEFORE publishing. The PR's
@@ -20,19 +23,12 @@ jobs:
   validate:
     runs-on: self-hosted
     steps:
+      # Checkout first so the local ./.github/actions/validate-codebase action
+      # exists on disk before it's referenced.
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v5
+      - uses: ./.github/actions/validate-codebase
         with:
-          node-version-file: .nvmrc
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Test
-        run: npm test
+          npm-token: ${{ secrets.NPM_TOKEN }}
 
   publish:
     needs: validate

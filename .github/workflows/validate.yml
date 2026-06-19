@@ -10,23 +10,26 @@ on:
 permissions:
   contents: read
 
-# Self-contained: timezest is a PUBLIC repo, so it can't consume the org's
-# private pncit/shared-actions composite actions (GitHub blocks public repos
-# from referencing private-repo actions). The same gates the shared
-# `validate-codebase` action runs — npm ci + lint + typecheck + test — are
-# inlined here and run on the org's self-hosted runners.
+# The npm CI gates live in a local composite action,
+# .github/actions/validate-codebase — a mirror of the private
+# pncit/shared-actions action (timezest is public and can't reference the
+# private repo). See .github/actions/README.md.
 
 jobs:
   validate:
     # Collaborator-only gate. Defense-in-depth alongside the repo setting
     # "Require approval for all outside collaborators": fork/outside PRs
     # evaluate this to false and the job is skipped, so untrusted code never
-    # executes on the self-hosted runner. PRs authored by the repo owner, org
-    # members, or collaborators run normally. (For push events this context is
-    # empty — but this workflow only triggers on pull_request.)
-    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    # executes on the self-hosted runner. PRs from the repo owner, org members,
+    # or collaborators run normally. Dependabot is allowed through — its PRs
+    # come from in-repo branches (no fork code) and should still be validated.
+    if: >-
+      github.actor == 'dependabot[bot]' ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: self-hosted
     steps:
+      # Checkout first so (a) the version-bump gate has git history and (b) the
+      # local ./.github/actions/validate-codebase action exists on disk.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
@@ -73,19 +76,7 @@ jobs:
             echo "Version changed: $PREV -> $CUR ✓"
           fi
 
-      - uses: actions/setup-node@v5
+      # npm ci + lint + typecheck + test (local mirror of shared-actions).
+      - uses: ./.github/actions/validate-codebase
         with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
+          npm-token: ${{ secrets.NPM_TOKEN }}

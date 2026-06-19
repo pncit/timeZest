@@ -1,0 +1,67 @@
+name: 'Validate codebase'
+description: >-
+  Run the standard npm CI gates against the calling repo: `npm ci`, then
+  `npm run lint`, `npm run typecheck`, `npm test`. Each is expected to be
+  defined as a script in the repo's package.json.
+
+# LOCAL MIRROR of
+#   pncit/shared-actions/.github/actions/validate-codebase
+#
+# Kept in-repo because timezest is a PUBLIC repository and GitHub blocks
+# public repos from referencing actions in the PRIVATE shared-actions repo.
+# This is a manual copy: when the upstream action changes, re-copy it here
+# and re-apply the public-repo tweaks (npm-token made optional). See
+# .github/actions/README.md.
+#
+# Does its own checkout + setup-node so it's self-contained — but because it
+# is referenced as a local path (./.github/actions/...), the calling job must
+# run actions/checkout BEFORE this action so the action file exists on disk.
+
+inputs:
+  npm-token:
+    description: >-
+      npm token used for `npm ci` (NODE_AUTH_TOKEN in the install step).
+      Optional here: timezest and its dependencies are public, so a token
+      isn't required. Upstream marks this required.
+    required: false
+    default: ''
+  npm-scope:
+    description: 'npm scope (for private packages).'
+    required: false
+    default: '@pncit'
+  registry-url:
+    description: 'npm registry URL.'
+    required: false
+    default: 'https://registry.npmjs.org'
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.npm-scope }}
+
+    - name: Install dependencies
+      shell: bash
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+      run: npm ci
+
+    - name: Lint
+      shell: bash
+      run: npm run lint
+
+    - name: Typecheck
+      shell: bash
+      run: npm run typecheck
+
+    - name: Test
+      shell: bash
+      run: npm test
