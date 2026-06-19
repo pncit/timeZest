@@ -18,11 +18,16 @@ jobs:
     # Push events (merge to main) always validate — that run is what gates
     # publishing. PR events only run for the repo's own team; fork/outside PRs
     # skip the job so untrusted code never reaches the self-hosted runner.
+    # Dependabot is allowed through: its PRs come from in-repo branches (no
+    # fork code), so they're safe on self-hosted and should be validated at PR
+    # time. (Divergence from node-quickbooks, which validates dependabot only
+    # on the post-merge push.)
     # NOTE: author_association only exists on pull_request events, so the push
     # path must be allowed explicitly or publishing (which needs a successful
     # Validate on push) would never fire.
     if: >-
       github.event_name != 'pull_request' ||
+      github.actor == 'dependabot[bot]' ||
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
     runs-on: self-hosted
     steps:
