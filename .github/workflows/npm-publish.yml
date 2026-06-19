@@ -7,9 +7,6 @@ name: Publish
 # commit.
 #
 # NOTE: `workflows:` below must match the Validate workflow's `name:` field.
-#
-# Validate runs on self-hosted, but this publish job runs on a GitHub-hosted
-# runner — required for OIDC provenance on a public package (see the job).
 on:
   workflow_run:
     workflows: ['Validate']
@@ -19,8 +16,9 @@ on:
   # Skips the workflow_run gate; operator's call.
   workflow_dispatch:
 
+# No id-token: this job authenticates with a classic npm token, not OIDC
+# (see the publish job for why OIDC isn't usable here).
 permissions:
-  id-token: write # Required for OIDC trusted publishing
   contents: read
 
 # Serialize publishes: a newer publish supersedes an in-progress older one.
@@ -37,14 +35,18 @@ jobs:
       (github.event.workflow_run.conclusion == 'success'
         && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.event == 'push')
-    # GitHub-hosted, NOT self-hosted (unlike node-quickbooks). timezest is a
-    # PUBLIC package, so npm auto-generates an OIDC provenance attestation on
-    # publish — and npm only supports provenance from GitHub-hosted runners
-    # ("Unsupported GitHub Actions runner environment: self-hosted"). A
-    # self-hosted publish fails with HTTP 422. node-quickbooks avoids this only
-    # because it's a restricted (private) package, which never gets provenance.
-    # This job is post-merge trusted code, so there's no fork-PR exposure.
-    runs-on: ubuntu-latest
+    # Runs on SELF-HOSTED, like the rest of the pipeline. timezest is a PUBLIC
+    # package, which rules out OIDC trusted publishing here: npm forces a
+    # provenance attestation for public packages under OIDC, and provenance is
+    # only supported on GitHub-hosted runners (self-hosted → HTTP 422). So this
+    # job authenticates with a classic npm automation token (NODE_AUTH_TOKEN)
+    # and publishes WITHOUT provenance. (node-quickbooks can use OIDC on
+    # self-hosted only because it's a restricted package, which gets no
+    # provenance. timezest being public is the difference.)
+    #
+    # Requires secrets.NPM_TOKEN to be an automation/granular token with
+    # publish rights to the `timezest` package.
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v6
         with:
@@ -56,8 +58,7 @@ jobs:
           fetch-depth: 2
 
       # timezest is an unscoped, public package, so no `scope:` override and no
-      # publishConfig.access — plain `npm publish` ships it public via OIDC
-      # (with provenance, since this runs on a GitHub-hosted runner).
+      # publishConfig.access — plain `npm publish` ships it public.
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -65,10 +66,6 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-
-      # npm 11.5.1+ is required for OIDC trusted publishing.
-      - name: Update npm
-        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
@@ -78,7 +75,12 @@ jobs:
       - name: Build
         run: npm run build
 
-      # `npm publish` is a no-op failure if the version already exists, so a
-      # push without a version bump simply doesn't release.
+      # Token auth via NODE_AUTH_TOKEN (the registry-url above wires it into
+      # .npmrc). No --provenance: it's off by default with token auth, and
+      # can't be used from self-hosted anyway. `npm publish` is a no-op failure
+      # if the version already exists, so a push without a version bump simply
+      # doesn't release.
       - name: Publish to npm
         run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
