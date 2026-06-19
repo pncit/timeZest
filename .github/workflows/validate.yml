@@ -16,26 +16,31 @@ permissions:
 jobs:
   validate:
     # Push events (merge to main) always validate — that run is what gates
-    # publishing. PR events only run for the repo's own team; fork/outside PRs
-    # skip the job so untrusted code never reaches the self-hosted runner.
-    # Dependabot is allowed through: its PRs come from in-repo branches (no
-    # fork code), so they're safe on self-hosted and should be validated at PR
-    # time. (Divergence from node-quickbooks, which validates dependabot only
-    # on the post-merge push.)
-    # NOTE: author_association only exists on pull_request events, so the push
-    # path must be allowed explicitly or publishing (which needs a successful
-    # Validate on push) would never fire.
+    # publishing. PR events only run when the PR's head branch lives in THIS
+    # repo (which requires write access); PRs from forks have a different head
+    # repo and skip the job, so untrusted fork code never reaches the
+    # self-hosted runner.
+    #
+    # We gate on head-repo identity rather than author_association because the
+    # latter downgrades private org members to "CONTRIBUTOR" in the event
+    # payload, which would wrongly skip our own team's PRs. head.repo is null
+    # for deleted forks, so the comparison safely fails closed (skips).
+    #
+    # Dependabot PRs use in-repo branches, so they satisfy the head-repo check
+    # and still RUN here (we want their test coverage) — but they are NOT
+    # exempt from the version-bump gate below, so they fail until a human turns
+    # the dependency update into a real, version-bumped release. That keeps
+    # main from drifting out of sync with what's published to npm.
     if: >-
       github.event_name != 'pull_request' ||
-      github.actor == 'dependabot[bot]' ||
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
     steps:
       # Up-front checkout: required so the local composite actions
       # (./.github/actions/*) exist on the runner before they're referenced,
       # and gives the version-bump step the base branch to diff against.
       # The vendored actions live here (not in the private pncit/shared-actions)
-      # because this repo is PUBLIC and can't reference a private action.
+      # because this repo is PUBLIC and can't clone a private action.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 2
@@ -48,14 +53,14 @@ jobs:
           node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
           npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
 
-      # Version-bump gate (PRs only): timezest is a published library, so every
-      # PR into main must bump package.json's version.
-      #
-      # Dependabot PRs are exempt: they bump dependency versions, never the
-      # package's own version (that happens at release time), so this gate
-      # would fail 100% of them.
+      # Version-bump gate: timezest is a published library, so every PR into
+      # main must bump package.json's version — no exceptions. Dependabot PRs
+      # don't bump the package's own version, so they fail here by design; a
+      # maintainer rolls the dependency update into a versioned release (bumping
+      # the version) to land it. This prevents an unversioned change from
+      # merging and desyncing main from the published npm package.
       - name: Verify version changed
-        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail

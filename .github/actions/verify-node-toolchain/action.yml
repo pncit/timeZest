@@ -8,9 +8,9 @@ description: >-
   differently from the committed lockfile.
 
 # Vendored from pncit/shared-actions@v1 because this repo is PUBLIC and
-# shared-actions is PRIVATE — a public repo can't reference a private action
-# (and external fork PRs never can). Keep in sync manually if the upstream
-# action changes. See .github/actions/README.md.
+# shared-actions is PRIVATE — a public repo can't reliably clone a
+# private action (and external fork PRs never can). Keep in sync manually if
+# the upstream action changes.
 
 inputs:
   node-major-version:

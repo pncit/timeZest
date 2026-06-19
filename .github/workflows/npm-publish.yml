@@ -34,7 +34,11 @@ jobs:
       (github.event.workflow_run.conclusion == 'success'
         && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.event == 'push')
-    runs-on: self-hosted
+    # GitHub-hosted (node-quickbooks uses self-hosted): timezest is PUBLIC, so
+    # npm attaches a provenance attestation on publish, which npm only allows
+    # from GitHub-hosted runners (self-hosted → HTTP 422). Post-merge trusted
+    # code, and only runs on real version-bump releases.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
@@ -45,29 +49,28 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 2
 
-      # timezest is an unscoped, public package, so no `scope:` override and no
-      # publishConfig.access — plain `npm publish` ships it public via OIDC.
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: https://registry.npmjs.org
+          # No `scope`: timezest is an unscoped, public package.
           cache: npm
           cache-dependency-path: |
             package-lock.json
 
-      # npm 11.5.1+ is required for OIDC trusted publishing.
       - name: Update npm
         run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
 
-      # Unlike node-quickbooks (ships JS directly), timezest compiles to dist/
-      # via tsc before publishing.
+      # timezest compiles to dist/ before publishing (node-quickbooks ships
+      # index.js / index.d.ts directly and has no build step).
       - name: Build
         run: npm run build
 
       # `npm publish` is a no-op failure if the version already exists, so a
-      # push without a version bump simply doesn't release.
+      # push without a version bump simply doesn't release. --provenance: public
+      # package on a GitHub-hosted runner.
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --provenance
