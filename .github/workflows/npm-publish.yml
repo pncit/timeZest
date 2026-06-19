@@ -8,8 +8,9 @@ permissions:
   id-token: write # Required for OIDC
   contents: read
 
-# Self-contained on GitHub-hosted runners — see validate.yml for why timezest
-# inlines the gates instead of using pncit/shared-actions.
+# Self-contained — see validate.yml for why timezest inlines the gates instead
+# of using pncit/shared-actions. Runs on self-hosted runners; this workflow
+# only triggers on push to main (post-merge, trusted), so no fork-PR exposure.
 
 jobs:
   # Validate the actual commit that landed on main BEFORE publishing. The PR's
@@ -17,7 +18,7 @@ jobs:
   # that was never validated as-is — so we re-validate here. publish `needs` this
   # job, so a validation failure now blocks the publish.
   validate:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v5
@@ -35,7 +36,7 @@ jobs:
 
   publish:
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       # timezest is an unscoped, public package, so no `scope:` override and no
