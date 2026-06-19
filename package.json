@@ -1,6 +1,6 @@
 {
   "name": "timezest",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -29,14 +29,14 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@types/node": "^25.9.3",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^9.0.0",
+    "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.5.3",
-    "typescript": "^5.8.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   },
   "repository": {
