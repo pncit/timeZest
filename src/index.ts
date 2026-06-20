@@ -29,6 +29,7 @@ export {
   AppointmentType,
   SchedulingRequest,
   SchedulingRequestPost,
+  AssociatedEntityPost,
   Team,
 } from "./entities/entities";
 export {

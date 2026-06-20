@@ -61,13 +61,23 @@ export interface SchedulingRequest {
   updated_at: number;
 }
 
+/**
+ * An associated entity sent with a scheduling request. The identifier used
+ * depends on the entity type:
+ * - Ticket-style entities (e.g. `connectwise_psa/service_ticket`) use
+ *   `number` and may optionally include `id`.
+ * - Contact-style entities (e.g. `connectwise_psa/contact`) use `id`. When a
+ *   contact entity is present it takes precedence over the ticket's contact
+ *   when TimeZest resolves the end user.
+ */
+export type AssociatedEntityPost =
+  | { type: string; number: string; id?: number }
+  | { type: string; id: number };
+
 export interface SchedulingRequestPost {
   appointment_type_id: string;
   trigger_mode: string;
-  associated_entities: Array<{
-    type: string;
-    number: string;
-  }>;
+  associated_entities: Array<AssociatedEntityPost>;
   resource_ids: string[];
 }
 
