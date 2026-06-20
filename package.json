@@ -1,6 +1,6 @@
 {
   "name": "timezest",
-  "version": "2.0.4",
+  "version": "2.1.0",
   "main": "dist/index.js",
   "files": [
     "dist",
@@ -11,7 +11,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write .",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",

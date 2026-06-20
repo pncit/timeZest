@@ -57,12 +57,16 @@ async function createSchedulingRequest() {
   try {
     const request = await timeZest.createSchedulingRequest({
       appointment_type_id: "12345",
-      end_user_email: "user@example.com",
-      end_user_name: "John Doe",
-      resources: [],
-      scheduled_agents: [],
-      selected_start_time: new Date().toISOString(),
-      selected_time_zone: "UTC",
+      trigger_mode: "automatic",
+      associated_entities: [
+        // Ticket-style entity: identified by `number`
+        { type: "connectwise_psa/service_ticket", number: "#1234" },
+        // Contact-style entity: identified by `id` (number). When present, the
+        // contact takes precedence over the ticket's contact when TimeZest
+        // resolves the invitee.
+        { type: "connectwise_psa/contact", id: 9065 },
+      ],
+      resource_ids: ["67890"],
     });
     console.log("Created Scheduling Request:", request);
   } catch (error) {

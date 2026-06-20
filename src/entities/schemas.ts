@@ -67,15 +67,22 @@ export const SchedulingRequestSchema = z.object({
   updated_at: z.number(),
 });
 
+export const AssociatedEntityPostSchema = z.union([
+  z.object({
+    type: z.string(),
+    number: z.string(),
+    id: z.number().optional(),
+  }),
+  z.object({
+    type: z.string(),
+    id: z.number(),
+  }),
+]);
+
 export const SchedulingRequestPostSchema = z.object({
   appointment_type_id: z.string(),
   trigger_mode: z.string(),
-  associated_entities: z.array(
-    z.object({
-      type: z.string(),
-      number: z.string(),
-    }),
-  ),
+  associated_entities: z.array(AssociatedEntityPostSchema),
   resource_ids: z.array(z.string()),
 });
 
