@@ -34,10 +34,10 @@ jobs:
       (github.event.workflow_run.conclusion == 'success'
         && github.event.workflow_run.head_branch == 'main'
         && github.event.workflow_run.event == 'push')
-    # GitHub-hosted (node-quickbooks uses self-hosted): timezest is PUBLIC, so
-    # npm attaches a provenance attestation on publish, which npm only allows
-    # from GitHub-hosted runners (self-hosted → HTTP 422). Post-merge trusted
-    # code, and only runs on real version-bump releases.
+    # GitHub-hosted: timezest is PUBLIC, so npm attaches a provenance
+    # attestation on publish, which npm only allows from GitHub-hosted runners
+    # (self-hosted → HTTP 422). Post-merge trusted code, and only runs on real
+    # version-bump releases.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
