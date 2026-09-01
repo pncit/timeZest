@@ -28,10 +28,10 @@ jobs:
     # for deleted forks, so the comparison safely fails closed (skips).
     #
     # Dependabot PRs use in-repo branches, so they satisfy the head-repo check
-    # and still RUN here (we want their test coverage) — but they are NOT
-    # exempt from the version-bump gate below, so they fail until a human turns
-    # the dependency update into a real, version-bumped release. That keeps
-    # main from drifting out of sync with what's published to npm.
+    # and run here like any other PR. There is deliberately no version-bump
+    # gate at PR time: a merge that doesn't bump package.json simply doesn't
+    # publish (see npm-publish.yml), so dependency-only PRs can land on their
+    # own and get released with the next version bump.
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
@@ -42,13 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Up-front checkout: required so the local composite actions
-      # (./.github/actions/*) exist on the runner before they're referenced,
-      # and gives the version-bump step the base branch to diff against.
+      # (./.github/actions/*) exist on the runner before they're referenced.
       # The vendored actions live here (not in the private pncit/shared-actions)
       # because this repo is PUBLIC and can't clone a private action.
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 2
 
       # Install the repo's Node (.nvmrc) before the toolchain check: the hosted
       # image's system Node is whatever Ubuntu ships, not necessarily ours.
@@ -64,47 +61,6 @@ jobs:
         with:
           node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
           npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
-
-      # Version-bump gate: timezest is a published library, so every PR into
-      # main must bump package.json's version — no exceptions. Dependabot PRs
-      # don't bump the package's own version, so they fail here by design; a
-      # maintainer rolls the dependency update into a versioned release (bumping
-      # the version) to land it. This prevents an unversioned change from
-      # merging and desyncing main from the published npm package.
-      - name: Verify version changed
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          set -euo pipefail
-          CUR=$(node -p "require('./package.json').version || ''")
-
-          # Get the base branch (usually main)
-          BASE_BRANCH="${GITHUB_BASE_REF:-main}"
-          git fetch origin "$BASE_BRANCH:$BASE_BRANCH" || true
-
-          if git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
-            PREV=$(git show "$BASE_BRANCH:package.json" 2>/dev/null \
-              | node -p "(() => { const s=require('fs').readFileSync(0,'utf8'); try { return JSON.parse(s).version || '' } catch { return '' } })()" \
-              || true)
-          else
-            PREV=""
-          fi
-
-          if [ -z "$CUR" ]; then
-            echo "::error::No version found in package.json"
-            exit 1
-          fi
-
-          if [ -n "$PREV" ] && [ "$CUR" = "$PREV" ]; then
-            echo "::error::package.json version unchanged ($PREV -> $CUR). Version must be bumped for PRs."
-            exit 1
-          fi
-
-          if [ -z "$PREV" ]; then
-            echo "Could not determine previous version, skipping version check"
-          else
-            echo "Version changed: $PREV -> $CUR ✓"
-          fi
 
       # Codebase checks: npm ci + lint + typecheck + test. This action does its
       # own checkout + setup-node (node-version-file: .nvmrc) and matches the

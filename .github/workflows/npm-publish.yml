@@ -69,8 +69,26 @@ jobs:
       - name: Build
         run: npm run build
 
-      # `npm publish` is a no-op failure if the version already exists, so a
-      # push without a version bump simply doesn't release. --provenance: public
-      # package on a GitHub-hosted runner.
+      # Version gate. This is the single place a version bump is enforced:
+      # merges that don't bump package.json (Dependabot, docs, CI) are a clean
+      # no-op here rather than a failed run, and npm itself refuses to publish
+      # over an existing version, so main can never re-release silently.
+      - name: Check if version already published
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${NAME}@${VERSION} already on npm — no version bump on this commit, skipping publish."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "${NAME}@${VERSION} not yet published — will publish."
+          fi
+
+      # --provenance: public package on a GitHub-hosted runner.
       - name: Publish to npm
+        if: steps.check.outputs.published == 'false'
         run: npm publish --provenance
