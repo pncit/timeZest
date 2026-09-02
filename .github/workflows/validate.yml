@@ -28,10 +28,9 @@ jobs:
     # for deleted forks, so the comparison safely fails closed (skips).
     #
     # Dependabot PRs use in-repo branches, so they satisfy the head-repo check
-    # and run here like any other PR. There is deliberately no version-bump
-    # gate at PR time: a merge that doesn't bump package.json simply doesn't
-    # publish (see npm-publish.yml), so dependency-only PRs can land on their
-    # own and get released with the next version bump.
+    # and RUN here (we want their test coverage). They are exempt from the
+    # version-bump gate below, so they can merge unpublished; the next human
+    # bump ships them.
     if: >-
       github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository
@@ -61,6 +60,17 @@ jobs:
         with:
           node-major-version: ${{ vars.NODE_MAJOR_VERSION }}
           npm-major-version: ${{ vars.NPM_MAJOR_VERSION }}
+
+      # Version-bump gate: @pncit/timezest is a published library, so every
+      # PR into main must bump package.json's version, or
+      # publish-on-version-bump has nothing to publish after the squash.
+      # Dependabot is exempt (the action's default): it never bumps the
+      # package's own version, so its merges land unpublished until the next
+      # human bump. PR-only — on the main push the gate would compare to
+      # HEAD^ and fail every unversioned merge; npm-publish.yml already skips
+      # when there is nothing new to publish.
+      - uses: ./.github/actions/verify-version-bump
+        if: github.event_name == 'pull_request'
 
       # Codebase checks: npm ci + lint + typecheck + test. This action does its
       # own checkout + setup-node (node-version-file: .nvmrc) and matches the
