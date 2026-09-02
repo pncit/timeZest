@@ -20,7 +20,7 @@ import { makeRequest } from "./utils/makeRequest";
 import { API_ENDPOINTS } from "./constants/endpoints";
 import { buildLogger, withLogging } from "./utils/logger";
 import { makePaginatedRequest } from "./utils/makePaginatedRequest";
-import { ZodSchema } from "zod";
+import { ZodType } from "zod";
 import { TQLFilter } from "./utils/tqlFilter";
 
 export {
@@ -271,10 +271,10 @@ export class TimeZestAPI {
   /**
    * Validates API responses using Zod schemas if outputValidation is enabled in the config.
    * @param {T[]} response - The API response data to validate.
-   * @param {ZodSchema} schema - The Zod schema to validate against.
+   * @param {ZodType<T>} schema - The Zod schema to validate against.
    * @returns {T[]} The validated or raw response data.
    */
-  private validateResponse<T>(response: T[], schema: ZodSchema): T[] {
+  private validateResponse<T>(response: T[], schema: ZodType<T>): T[] {
     if (this.config.outputValidation) {
       return response.map((item) => schema.parse(item));
     }
