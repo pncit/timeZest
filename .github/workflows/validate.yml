@@ -10,13 +10,48 @@ on:
   push:
     branches: [main]
 
+# A Dependabot rebase or a force-push replaces the PR head; the run queued
+# for the old head is worthless, so cancel it. Push runs group by sha and
+# are never cancelled.
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
+  # Squash-only + strict up-to-date mean the tree on main after a merge is
+  # byte-identical to the PR head tree that `validate` already passed. On the
+  # push run, look that PR run up (by tree SHA) and skip the codebase checks
+  # if it exists; the workflow still completes `success`, which is what
+  # npm-publish.yml's `workflow_run` trigger needs. Anything reaching main
+  # without a matching PR run (admin bypass push) falls through to the full
+  # validate.
+  precheck:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      validated: ${{ steps.tree.outputs.validated }}
+    steps:
+      # Local composite (see .github/actions/README.md): the repo has to be
+      # checked out before `./.github/actions/*` can be referenced.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
+      - id: tree
+        uses: ./.github/actions/verify-validated-tree
+
   validate:
-    # Push events (merge to main) always validate — that run is what gates
-    # publishing. PR events only run when the PR's head branch lives in THIS
+    needs: precheck
+    # Push events (merge to main) validate unless `precheck` above found the
+    # PR run that already passed this exact tree — either way that run is what
+    # gates publishing. PR events only run when the PR's head branch lives in THIS
     # repo (which requires write access); PRs from forks have a different head
     # repo and skip the job. On the ephemeral GitHub-hosted runner below this
     # is a POLICY choice, not a runner-safety requirement (fork runs are
@@ -32,8 +67,10 @@ jobs:
     # version-bump gate below, so they can merge unpublished; the next human
     # bump ships them.
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      !cancelled() &&
+      (github.event_name != 'push' || needs.precheck.outputs.validated != 'true') &&
+      (github.event_name != 'pull_request' ||
+        github.event.pull_request.head.repo.full_name == github.repository)
     # GitHub-hosted, like npm-publish.yml: the org's self-hosted runner group
     # does not accept jobs from public repos (allows_public_repositories=false,
     # on purpose — it keeps fork PRs off the fleet), so `self-hosted` here
