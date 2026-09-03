@@ -1,0 +1,135 @@
+name: 'Verify validated tree'
+description: >-
+  One observation: has a successful pull_request run of this workflow already
+  validated the exact tree that is now at HEAD? Squash-only merges plus the
+  org's strict up-to-date rule mean the tree that lands on main is
+  byte-identical to the PR head tree that `validate` already passed, so the
+  push-to-main run can skip the full codebase checks and keep only its role
+  as the `workflow_run` trigger for publish/deploy. Never fails; gate the
+  validate job on the `validated` output.
+
+# Usage (in validate.yml):
+#
+#   jobs:
+#     precheck:
+#       if: github.event_name == 'push'
+#       runs-on: self-hosted
+#       outputs:
+#         validated: ${{ steps.tree.outputs.validated }}
+#       steps:
+#         - id: tree
+#           uses: pncit/shared-actions/.github/actions/verify-validated-tree@<sha> # vX.Y.Z
+#
+#     validate:
+#       needs: precheck
+#       if: >-
+#         !cancelled() &&
+#         (github.event_name != 'push' || needs.precheck.outputs.validated != 'true')
+#       ...
+#
+# A skipped `validate` job still leaves the workflow with conclusion
+# `success`, so downstream `workflow_run` consumers (deploy, npm-publish,
+# verify-health) fire exactly as before. Anything that reaches main without
+# a matching PR run — an admin bypass push, a merge of a tree no run has
+# seen — falls through to the full validate.
+#
+# Compares tree SHAs through the Git Data API (no checkout, no clone): PR head
+# commits stay resolvable after their branch is deleted because
+# refs/pull/N/head persists. Only runs whose `validate` job actually
+# succeeded count — a run where the job was skipped (fork PR) does not.
+
+inputs:
+  token:
+    description: 'Token with actions:read and contents:read. Default: the workflow token.'
+    required: false
+    default: ${{ github.token }}
+  workflow:
+    description: >-
+      Workflow file name to search for prior runs. Default: the file this
+      action is running in (derived from github.workflow_ref).
+    required: false
+    default: ''
+  job-name:
+    description: 'Name of the job that must have succeeded in the prior run.'
+    required: false
+    default: 'validate'
+  limit:
+    description: 'How many recent successful pull_request runs to inspect.'
+    required: false
+    default: '30'
+
+outputs:
+  validated:
+    description: '"true" if a successful pull_request run validated this exact tree.'
+    value: ${{ steps.tree.outputs.validated }}
+  run-id:
+    description: 'ID of the matching run, or empty.'
+    value: ${{ steps.tree.outputs.run-id }}
+  head-sha:
+    description: 'Head commit of the matching run, or empty.'
+    value: ${{ steps.tree.outputs.head-sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Look for a successful pull_request run on the same tree
+      id: tree
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        WORKFLOW: ${{ inputs.workflow }}
+        JOB_NAME: ${{ inputs.job-name }}
+        LIMIT: ${{ inputs.limit }}
+        REPO: ${{ github.repository }}
+        SHA: ${{ github.sha }}
+        WORKFLOW_REF: ${{ github.workflow_ref }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$WORKFLOW" ]; then
+          # owner/repo/.github/workflows/validate.yml@refs/heads/main -> validate.yml
+          WORKFLOW=${WORKFLOW_REF%%@*}
+          WORKFLOW=${WORKFLOW##*/}
+        fi
+
+        tree_of() {
+          gh api "repos/$REPO/git/commits/$1" --jq .tree.sha
+        }
+
+        TREE=$(tree_of "$SHA")
+        echo "HEAD $SHA has tree $TREE"
+
+        RUNS=$(gh run list -R "$REPO" -w "$WORKFLOW" --event pull_request --status success \
+                 -L "$LIMIT" --json databaseId,headSha --jq '.[] | "\(.databaseId) \(.headSha)"')
+
+        MATCH_RUN=""
+        MATCH_SHA=""
+        while read -r run_id head_sha; do
+          [ -n "$run_id" ] || continue
+          [ "$(tree_of "$head_sha" 2>/dev/null || true)" = "$TREE" ] || continue
+          ok=$(gh run view "$run_id" -R "$REPO" --json jobs \
+                 --jq "[.jobs[] | select(.name == \"$JOB_NAME\" and .conclusion == \"success\")] | length")
+          if [ "$ok" -eq 0 ]; then
+            echo "Run $run_id matches the tree but its $JOB_NAME job did not succeed; skipping."
+            continue
+          fi
+          MATCH_RUN=$run_id
+          MATCH_SHA=$head_sha
+          break
+        done <<< "$RUNS"
+
+        if [ -n "$MATCH_RUN" ]; then
+          echo "::notice::Tree $TREE already validated by run $MATCH_RUN (PR head $MATCH_SHA); full validate skipped."
+          {
+            echo "validated=true"
+            echo "run-id=$MATCH_RUN"
+            echo "head-sha=$MATCH_SHA"
+          } >> "$GITHUB_OUTPUT"
+        else
+          echo "No successful pull_request run of $WORKFLOW found for tree $TREE; full validate will run."
+          {
+            echo "validated=false"
+            echo "run-id="
+            echo "head-sha="
+          } >> "$GITHUB_OUTPUT"
+        fi
