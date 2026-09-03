@@ -38,6 +38,11 @@ description: >-
 # refs/pull/N/head persists. Only runs whose `validate` job actually
 # succeeded count — a run where the job was skipped (fork PR) does not.
 
+# Vendored from pncit/shared-actions@v3.1.0 (4281e5b) because this repo is PUBLIC
+# and shared-actions is PRIVATE — a public repo can't `uses:` a private
+# action. Byte-for-byte identical to upstream apart from this comment;
+# re-copy when upstream changes (see .github/actions/README.md).
+
 inputs:
   token:
     description: 'Token with actions:read and contents:read. Default: the workflow token.'
